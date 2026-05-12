@@ -8,7 +8,9 @@
     "types": ["vite/client", "node"],
     "moduleResolution": "Bundler",
     "module": "ESNext",
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "node_modules", "tests", "electron"]

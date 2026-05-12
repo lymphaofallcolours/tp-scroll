@@ -1,0 +1,58 @@
+/* tp-scroll design tokens — editorial-typographic, warm-paper aesthetic.
+   See memory_docs/plans/v1.0.md for the rationale. */
+
+:root {
+  /* Surface — warm-paper, slightly aged */
+  --surface-page: #f4ede0;            /* primary background */
+  --surface-card: #f8f3e9;            /* lifted panels */
+  --surface-sunk: #ece2cc;            /* recessed grid cells */
+  --surface-edge: #d4c8ad;            /* hairlines, dividers */
+
+  /* Ink — deep blue-black, like fountain-pen ink on yellowed paper */
+  --ink-primary: #1a2433;
+  --ink-secondary: #3a4659;
+  --ink-tertiary: #6b7488;
+  --ink-faint: #aaa794;
+
+  /* Accents — anchored to a small palette so cells stay readable */
+  --accent-trip: #7a8e62;             /* sage — days at home (the win) */
+  --accent-trip-soft: #c4cdb1;
+  --accent-holiday: #c08a4b;          /* muted gold — public holidays */
+  --accent-holiday-soft: #e6d6b9;
+  --accent-blocked: #a85333;          /* faded red — blocked periods */
+  --accent-blocked-soft: #d9b3a4;
+  --accent-weekend: #c9bea2;          /* weekends look like the page itself, just darker */
+
+  /* Type scale */
+  --font-display: "Fraunces Variable", "Fraunces", Georgia, serif;
+  --font-body: "Fraunces Variable", "Fraunces", Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+
+  --type-display-xl: 56px;
+  --type-display-lg: 40px;
+  --type-display-md: 28px;
+  --type-body: 16px;
+  --type-small: 13px;
+  --type-mono: 13px;
+  --type-mono-sm: 11px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radii — kept tight for a printed feel */
+  --radius-cell: 2px;
+  --radius-card: 4px;
+
+  /* Motion */
+  --ease-quiet: cubic-bezier(0.2, 0.0, 0.0, 1);
+  --duration-slow: 600ms;
+  --duration-med: 240ms;
+  --duration-fast: 120ms;
+}

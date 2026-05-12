@@ -1,0 +1,184 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-6) var(--space-8);
+  position: relative;
+}
+
+.masthead {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  margin-bottom: var(--space-7);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--surface-edge);
+  gap: var(--space-5);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: var(--type-display-xl);
+  font-weight: 320;
+  font-variation-settings: "opsz" 144, "SOFT" 80;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+  color: var(--ink-primary);
+}
+
+.brandKicker {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--ink-tertiary);
+  margin-bottom: var(--space-2);
+  display: block;
+}
+
+.sessionMeta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sessionName {
+  font-family: var(--font-display);
+  font-size: var(--type-display-md);
+  font-style: italic;
+  font-weight: 360;
+  color: var(--ink-secondary);
+}
+
+.sessionRoute {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  color: var(--ink-tertiary);
+}
+
+.sessionRoute em {
+  font-style: normal;
+  color: var(--ink-primary);
+  letter-spacing: 0.05em;
+}
+
+.legend {
+  display: flex;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-edge);
+  border-radius: var(--radius-card);
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--ink-secondary);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-cell);
+  display: inline-block;
+}
+
+.swatchResidence { background: var(--surface-sunk); }
+.swatchWeekend { background: var(--accent-weekend); opacity: 0.7; }
+.swatchHoliday { background: var(--accent-holiday-soft); position: relative; }
+.swatchHoliday::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent-holiday);
+}
+.swatchBlocked {
+  background: var(--accent-blocked-soft);
+  background-image: repeating-linear-gradient(135deg, transparent, transparent 3px, var(--accent-blocked) 3px, var(--accent-blocked) 4px);
+}
+.swatchActual { background: var(--accent-trip); }
+.swatchPlanned {
+  background: var(--accent-trip-soft);
+  border: 1px dashed var(--accent-trip);
+  box-sizing: border-box;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-7);
+  padding: var(--space-5);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-edge);
+  border-radius: var(--radius-card);
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summaryLabel {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--ink-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.summaryValue {
+  font-family: var(--font-display);
+  font-size: var(--type-display-lg);
+  font-weight: 380;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  color: var(--ink-primary);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.summaryUnit {
+  font-family: var(--font-mono);
+  font-size: var(--type-small);
+  color: var(--ink-tertiary);
+  margin-left: var(--space-1);
+}
+
+.months {
+  display: flex;
+  flex-direction: column;
+}
+
+.footnote {
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--surface-edge);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--type-small);
+  color: var(--ink-tertiary);
+  text-align: center;
+}
+
+/* Staggered reveal — single orchestrated load animation per the design brief */
+.page > * {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: rise var(--duration-slow) var(--ease-quiet) forwards;
+}
+.masthead   { animation-delay: 0ms; }
+.legend     { animation-delay: 80ms; }
+.summary    { animation-delay: 160ms; }
+.months     { animation-delay: 240ms; }
+.footnote   { animation-delay: 320ms; }
+
+@keyframes rise {
+  to { opacity: 1; transform: translateY(0); }
+}

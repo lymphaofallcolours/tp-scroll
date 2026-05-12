@@ -1,0 +1,145 @@
+.month {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--surface-edge);
+}
+
+.month:first-of-type {
+  border-top: none;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 220px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--type-display-md);
+  font-weight: 360;
+  font-variation-settings: "opsz" 144, "SOFT" 50;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--ink-primary);
+}
+
+.titleSmall {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-tertiary);
+  font-feature-settings: "tnum" 1;
+}
+
+.stat {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  color: var(--ink-secondary);
+  font-feature-settings: "tnum" 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 28px);
+  grid-auto-rows: 28px;
+  gap: 3px;
+}
+
+.weekdayLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.cell {
+  border-radius: var(--radius-cell);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  font-feature-settings: "tnum" 1;
+  color: var(--ink-secondary);
+  transition: transform var(--duration-fast) var(--ease-quiet);
+}
+
+.cell:hover {
+  transform: scale(1.06);
+}
+
+.cellBlank {
+  background: transparent;
+  pointer-events: none;
+  color: transparent;
+}
+
+.cellResidence {
+  background: var(--surface-sunk);
+}
+
+.cellWeekend {
+  background: var(--accent-weekend);
+  opacity: 0.7;
+}
+
+.cellHoliday {
+  background: var(--accent-holiday-soft);
+  color: var(--ink-primary);
+  position: relative;
+}
+
+.cellHoliday::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-holiday);
+}
+
+.cellBlocked {
+  background: var(--accent-blocked-soft);
+  color: var(--ink-primary);
+  position: relative;
+}
+
+.cellBlocked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 3px,
+      var(--accent-blocked) 3px,
+      var(--accent-blocked) 4px
+    );
+  opacity: 0.35;
+  border-radius: var(--radius-cell);
+  pointer-events: none;
+}
+
+.cellTripActual {
+  background: var(--accent-trip);
+  color: var(--surface-card);
+}
+
+.cellTripPlanned {
+  background: var(--accent-trip-soft);
+  color: var(--ink-primary);
+  border: 1px dashed var(--accent-trip);
+}
