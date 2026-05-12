@@ -10,16 +10,28 @@ export const registerPlanCommand = (program: Command, deps: CliDeps): void => {
     .command("plan")
     .description("Run the optimizer and print the top plans")
     .option("--top <n>", "Number of plans to show", "5")
-    .action(async (opts: { top: string }) => {
+    .option(
+      "--diverse [seeds]",
+      "Use multi-seed search for cross-cluster diversity (default 5 seeds)",
+    )
+    .action(async (opts: { top: string; diverse?: string | boolean }) => {
       const session = await requireActiveSession(deps);
       const cycleYear = new Date().getUTCFullYear();
       const holidays = await deps.holidayProvider.forCountry(session.residenceCountry, cycleYear);
       const holidaySet = new Set(holidays.map((h) => h.day));
 
+      const seedCount =
+        opts.diverse === undefined
+          ? 1
+          : opts.diverse === true
+            ? 5
+            : Math.max(1, Number(opts.diverse));
+
       const plans = optimize(session, {
         clock: deps.clock,
         holidays: holidaySet,
         topK: Number(opts.top),
+        seedCount,
       });
 
       if (plans.length === 0) {
