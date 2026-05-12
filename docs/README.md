@@ -12,4 +12,13 @@ Project documentation, kept in sync with the codebase at every commit.
 
 ## Status
 
-**v0.1** — engine + CLI smoke test. Electron, flight integration, and reporting are explicit later phases.
+**v1.0** — engine + CLI + Electron desktop app.
+
+### Versions shipped on `main`
+
+| Version | What landed |
+|---|---|
+| v0.1 | Engine, adapters, CLI smoke test. 156 tests, 7 fast-check optimizer invariants. |
+| v0.2 | Half-days, multi-bucket budgets, Schengen status polish, cycle lifecycle (`rollCycle`). |
+| v0.3 | Optimizer polish: multi-seed search for cross-cluster top-K diversity (`--diverse`). LP-relaxation bound attempted and rolled back for perf reasons (see [`design/0002-branch-and-bound-optimizer.md`](design/0002-branch-and-bound-optimizer.md)). |
+| v1.0 | Electron desktop app — Calendar grid, Trip CRUD, Plan view, Burndown chart, Sessions management. Editorial-typographic UI ([`design/0008-frontend-design-tokens.md`](design/0008-frontend-design-tokens.md)). |
