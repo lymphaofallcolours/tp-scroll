@@ -3,6 +3,8 @@ export {
   EPOCH,
   toDayInt,
   fromDayInt,
+  dayIntFromIso,
+  isoFromDayInt,
 } from "./calendar/day-int.js";
 
 export {

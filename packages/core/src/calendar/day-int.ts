@@ -8,3 +8,8 @@ export const toDayInt = (date: Temporal.PlainDate): DayInt =>
   EPOCH.until(date, { largestUnit: "days" }).days;
 
 export const fromDayInt = (n: DayInt): Temporal.PlainDate => EPOCH.add({ days: n });
+
+export const dayIntFromIso = (iso: string): DayInt =>
+  toDayInt(Temporal.PlainDate.from(iso));
+
+export const isoFromDayInt = (n: DayInt): string => fromDayInt(n).toString();

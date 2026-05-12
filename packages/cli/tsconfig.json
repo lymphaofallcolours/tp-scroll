@@ -4,11 +4,6 @@
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "references": [
-    { "path": "../core" },
-    { "path": "../adapters/holidays" },
-    { "path": "../adapters/storage" }
-  ],
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules", "tests"]
 }
