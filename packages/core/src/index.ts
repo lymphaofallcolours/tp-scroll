@@ -38,6 +38,10 @@ export {
   DayAttributionSchema,
   type Trip,
   TripSchema,
+  type ResolvedAttribution,
+  resolveAttribution,
+  type TripCost,
+  computeTripCost,
 } from "./trips/index.js";
 
 export {
