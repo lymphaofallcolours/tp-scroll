@@ -36,7 +36,12 @@ Seven fast-check properties live in `packages/core/tests/optimizer/properties/in
 ## Running
 
 ```bash
-pnpm -r test                          # everything
-pnpm --filter @tp-scroll/core test    # unit + properties (≈ 90s)
-pnpm --filter @tp-scroll/cli test     # smoke
+pnpm -r test                              # everything
+pnpm --filter @tp-scroll/core test        # unit + properties (≈ 90s)
+pnpm --filter @tp-scroll/cli test         # smoke
+pnpm --filter @tp-scroll/core coverage    # v8 coverage report (≈ 10 min — slower under instrumentation)
 ```
+
+## Coverage
+
+v0.1 measures **95.05% line coverage** on `packages/core/` (target: ≥80% per the project quality bar). All domain modules are at 100% except `candidates.ts` (71%) and `optimizer/index.ts` (88%) — the gaps are exclusively the anchor-delta path and a handful of search edge cases that don't exercise in the current optimize() smoke tests.

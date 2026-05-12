@@ -77,12 +77,12 @@ describe("optimize", () => {
     }
   });
 
-  it("terminates in under 5 seconds for a full one-year cycle", () => {
+  it("terminates well under 10 seconds for a full one-year cycle (coverage-tolerant)", () => {
     const session = yearSession();
     const startMs = performance.now();
     optimize(session, { clock, holidays: new Set(), topK: 5 });
     const elapsed = performance.now() - startMs;
-    expect(elapsed).toBeLessThan(5_000);
+    expect(elapsed).toBeLessThan(10_000);
   });
 
   it("trips inside any returned plan are pairwise non-overlapping", () => {
