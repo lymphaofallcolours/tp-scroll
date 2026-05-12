@@ -1,0 +1,43 @@
+{
+  "name": "@tp-scroll/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -n vite,electron -c blue,magenta \"pnpm dev:renderer\" \"pnpm dev:electron\"",
+    "dev:renderer": "vite",
+    "dev:electron": "wait-on tcp:5173 && tsc -p tsconfig.electron.json && cross-env NODE_ENV=development electron .",
+    "build:renderer": "vite build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "pnpm build:renderer && pnpm build:electron",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "lint": "eslint --no-error-on-unmatched-pattern src electron tests",
+    "lint:fix": "eslint --fix --no-error-on-unmatched-pattern src electron tests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@tp-scroll/adapter-holidays": "workspace:*",
+    "@tp-scroll/adapter-storage": "workspace:*",
+    "@tp-scroll/core": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.3.1",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  }
+}
