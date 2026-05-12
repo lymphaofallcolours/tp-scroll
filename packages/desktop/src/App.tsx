@@ -4,6 +4,7 @@ import { Nav } from "./components/Nav.js";
 import { useSessionStore } from "./state/session.js";
 import { useUiStore } from "./state/ui.js";
 import { Calendar } from "./views/Calendar/Calendar.js";
+import { Plan } from "./views/Plan/Plan.js";
 import { Trips } from "./views/Trips/Trips.js";
 
 export const App = (): JSX.Element => {
@@ -41,7 +42,8 @@ export const App = (): JSX.Element => {
       <Nav />
       {view === "calendar" && <Calendar session={session} holidays={holidays} />}
       {view === "trips" && <Trips />}
-      {view !== "calendar" && view !== "trips" && (
+      {view === "plan" && <Plan />}
+      {(view === "burndown" || view === "sessions") && (
         <main style={{ padding: 48, color: "var(--ink-tertiary)", fontFamily: "var(--font-display)", fontStyle: "italic" }}>
           {view} view — coming in a later v1.0 PR.
         </main>
