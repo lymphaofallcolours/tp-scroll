@@ -21,6 +21,7 @@
     "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@js-temporal/polyfill": "^0.5.1",
+    "@tp-scroll/adapter-flights": "workspace:*",
     "@tp-scroll/adapter-holidays": "workspace:*",
     "@tp-scroll/adapter-storage": "workspace:*",
     "@tp-scroll/core": "workspace:*",

@@ -24,6 +24,10 @@ const api = {
   clock: {
     today: () => invoke("clock:today"),
   },
+  flights: {
+    providerName: () => invoke("flights:providerName"),
+    annotate: (req: unknown) => invoke("flights:annotate", req),
+  },
 };
 
 contextBridge.exposeInMainWorld("tpScrollApi", api);

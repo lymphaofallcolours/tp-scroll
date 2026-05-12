@@ -13,6 +13,7 @@ import type {
 } from "@tp-scroll/core";
 import type { Holiday } from "@tp-scroll/adapter-holidays";
 import type { SessionSummary } from "@tp-scroll/adapter-storage";
+import type { AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
 
 export type OptimizeRequest = Omit<OptimizeOptions, "clock" | "holidays"> & {
   readonly sessionId: string;
@@ -38,6 +39,14 @@ export type TpScrollApi = {
   };
   readonly clock: {
     today(): Promise<DayInt>;
+  };
+  readonly flights: {
+    providerName(): Promise<string>;
+    annotate(req: {
+      plan: TripPlan;
+      origin: string;
+      destination: string;
+    }): Promise<AnnotatedTripPlan>;
   };
 };
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   FixedClock,
@@ -7,7 +7,9 @@ import {
   scorePlan,
   type TripPlan,
 } from "@tp-scroll/core";
+import type { AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
 
+import { bridge } from "../../api/bridge.js";
 import { useSessionStore } from "../../state/session.js";
 import styles from "./Plan.module.css";
 
@@ -17,22 +19,32 @@ type RunState =
   | { kind: "done"; plans: ReadonlyArray<TripPlan>; durationMs: number }
   | { kind: "error"; message: string };
 
+type FlightFetchState = "idle" | "fetching" | "done" | "error";
+
 export const Plan = (): JSX.Element | null => {
   const session = useSessionStore((s) => s.session);
   const holidays = useSessionStore((s) => s.holidays);
 
   const [topK, setTopK] = useState(5);
   const [diverse, setDiverse] = useState(true);
+  const [fetchFlights, setFetchFlights] = useState(false);
   const [state, setState] = useState<RunState>({ kind: "idle" });
+  const [annotated, setAnnotated] = useState<ReadonlyArray<AnnotatedTripPlan> | null>(null);
+  const [flightState, setFlightState] = useState<FlightFetchState>("idle");
+  const [flightProviderName, setFlightProviderName] = useState<string | null>(null);
 
   const holidaySet = useMemo(() => new Set(holidays.map((h) => h.day)), [holidays]);
+
+  useEffect(() => {
+    void bridge.flights.providerName().then((n) => setFlightProviderName(n)).catch(() => undefined);
+  }, []);
 
   if (!session) return null;
 
   const run = (): void => {
     setState({ kind: "running" });
-    // Use a microtask delay so the spinner can render before the
-    // synchronous optimize() call blocks the main thread.
+    setAnnotated(null);
+    setFlightState("idle");
     setTimeout(() => {
       try {
         const t0 = performance.now();
@@ -44,6 +56,10 @@ export const Plan = (): JSX.Element | null => {
         });
         const t1 = performance.now();
         setState({ kind: "done", plans, durationMs: t1 - t0 });
+
+        if (fetchFlights && plans.length > 0) {
+          void runFlightFetch(plans);
+        }
       } catch (err) {
         setState({
           kind: "error",
@@ -52,6 +68,27 @@ export const Plan = (): JSX.Element | null => {
       }
     }, 30);
   };
+
+  const runFlightFetch = async (plans: ReadonlyArray<TripPlan>): Promise<void> => {
+    setFlightState("fetching");
+    try {
+      const out: AnnotatedTripPlan[] = [];
+      for (const plan of plans) {
+        const a = await bridge.flights.annotate({
+          plan,
+          origin: session.residenceCountry,
+          destination: session.homeCountry,
+        });
+        out.push(a);
+      }
+      setAnnotated(out);
+      setFlightState("done");
+    } catch {
+      setFlightState("error");
+    }
+  };
+
+  const isMockFlights = (flightProviderName ?? "").includes("mock");
 
   return (
     <main className={styles.page}>
@@ -79,6 +116,14 @@ export const Plan = (): JSX.Element | null => {
               onChange={(e) => setDiverse(e.target.checked)}
             />
             diverse
+          </label>
+          <label className={styles.checkboxControl} title={flightProviderName ?? ""}>
+            <input
+              type="checkbox"
+              checked={fetchFlights}
+              onChange={(e) => setFetchFlights(e.target.checked)}
+            />
+            flights {isMockFlights ? "(mock)" : ""}
           </label>
           <button
             type="button"
@@ -130,6 +175,11 @@ export const Plan = (): JSX.Element | null => {
               <span className={styles.summaryLabel}>Time</span>
               <span className={styles.summaryValue}>
                 {state.durationMs.toFixed(0)} ms
+                {flightState === "fetching" && (
+                  <span style={{ marginLeft: 8, color: "var(--ink-tertiary)" }}>
+                    · flights…
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -140,7 +190,15 @@ export const Plan = (): JSX.Element | null => {
                 No feasible plans within your budget.
               </div>
             ) : (
-              state.plans.map((plan, i) => <PlanCard key={i} plan={plan} rank={i + 1} />)
+              state.plans.map((plan, i) => (
+                <PlanCard
+                  key={i}
+                  plan={plan}
+                  rank={i + 1}
+                  annotated={annotated?.[i] ?? null}
+                  isMockFlights={isMockFlights}
+                />
+              ))
             )}
           </div>
         </>
@@ -149,10 +207,23 @@ export const Plan = (): JSX.Element | null => {
   );
 };
 
-const PlanCard = ({ plan, rank }: { plan: TripPlan; rank: number }): JSX.Element => {
+const PlanCard = ({
+  plan,
+  rank,
+  annotated,
+  isMockFlights,
+}: {
+  plan: TripPlan;
+  rank: number;
+  annotated: AnnotatedTripPlan | null;
+  isMockFlights: boolean;
+}): JSX.Element => {
   const score = scorePlan(plan);
   const leverage = score[1] === Number.POSITIVE_INFINITY ? "∞" : (score[1] / 10000).toFixed(2);
-  const sorted = [...plan.trips].sort((a, b) => a.departure - b.departure);
+  // Pair each trip with its annotation by original index (the annotation array
+  // is built in plan.trips order before we sorted below).
+  const indexed = plan.trips.map((trip, i) => ({ trip, annotation: annotated?.annotations[i] ?? null }));
+  const sorted = [...indexed].sort((a, b) => a.trip.departure - b.trip.departure);
 
   return (
     <article className={styles.plan}>
@@ -184,12 +255,22 @@ const PlanCard = ({ plan, rank }: { plan: TripPlan; rank: number }): JSX.Element
             <span className={styles.scoreLabel}>leave used</span>
             <span className={styles.scoreValue}>{plan.leaveCostTotal}</span>
           </div>
+          {annotated && annotated.totalPriceMinor !== null && (
+            <div className={styles.scoreChip}>
+              <span className={styles.scoreLabel}>
+                flights {isMockFlights ? "(mock)" : ""}
+              </span>
+              <span className={styles.scoreValue}>
+                {(annotated.totalPriceMinor / 100).toFixed(0)} {annotated.currency ?? ""}
+              </span>
+            </div>
+          )}
         </div>
         <div className={styles.tripList}>
           {sorted.length === 0 ? (
             <span style={{ color: "var(--ink-faint)" }}>— no trips, stay home —</span>
           ) : (
-            sorted.map((trip, i) => {
+            sorted.map(({ trip, annotation }, i) => {
               const days = trip.return - trip.departure + 1;
               return (
                 <div key={i} className={styles.tripLine}>
@@ -197,7 +278,19 @@ const PlanCard = ({ plan, rank }: { plan: TripPlan; rank: number }): JSX.Element
                   <span className={styles.tripDates}>
                     {isoFromDayInt(trip.departure)} → {isoFromDayInt(trip.return)}
                   </span>
-                  <span className={styles.tripMeta}>{String(days).padStart(2, "0")}d</span>
+                  <span className={styles.tripMeta}>
+                    {String(days).padStart(2, "0")}d
+                    {annotation && annotation.outbound !== null && annotation.inbound !== null && (
+                      <>
+                        {" · "}
+                        {((annotation.outbound.priceMinor + annotation.inbound.priceMinor) / 100).toFixed(
+                          0,
+                        )}
+                        {" "}
+                        {annotation.outbound.currency}
+                      </>
+                    )}
+                  </span>
                 </div>
               );
             })

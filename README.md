@@ -6,15 +6,16 @@ A TypeScript monorepo with a pure domain core, pluggable adapters for public-hol
 
 ## Status
 
-**v1.0** — Electron desktop app + CLI + engine. Five workspace packages:
+**v1.5** — Electron desktop app + CLI + engine + flight-price annotations. Six workspace packages:
 
 - `@tp-scroll/core` — pure engine (calendar, leave cycles, trips, constraints, optimizer)
 - `@tp-scroll/adapter-holidays` — public-holiday providers (Nager + date-holidays fallback)
 - `@tp-scroll/adapter-storage` — atomic JSON-file session storage
+- `@tp-scroll/adapter-flights` — flight-price providers (Amadeus Self-Service + Mock, caching wrapper, annotation orchestrator)
 - `@tp-scroll/cli` — `tp-scroll` command-line tool
-- `@tp-scroll/desktop` — Electron app with calendar grid, trip CRUD, plan view, and burndown chart
+- `@tp-scroll/desktop` — Electron app with calendar grid, trip CRUD, plan view (now with flight prices), burndown chart, sessions management
 
-200+ tests across the workspace including 7 fast-check optimizer invariants. Editorial-typographic UI built with Fraunces + JetBrains Mono on a warm-paper palette.
+240+ tests across the workspace including 7 fast-check optimizer invariants. Editorial-typographic UI built with Fraunces + JetBrains Mono on a warm-paper palette.
 
 See [`docs/`](docs/) for the architecture, CLI reference, and ADRs.
 
@@ -50,7 +51,20 @@ Sessions live at `~/.tp-scroll/sessions/{id}.json` (atomic writes, Zod-validated
 
 ### Offline mode
 
-Set `TP_SCROLL_NETWORK=off` and the holiday provider falls back to the bundled `date-holidays` package.
+Set `TP_SCROLL_NETWORK=off` and both the holiday and flight providers fall back to local sources (the bundled `date-holidays` package and the `MockFlightProvider` respectively).
+
+### Flight prices (optional)
+
+Register a free [Amadeus Self-Service](https://developers.amadeus.com/) account, then:
+
+```bash
+export TP_SCROLL_AMADEUS_CLIENT_ID=...
+export TP_SCROLL_AMADEUS_CLIENT_SECRET=...
+```
+
+The Plan view's "flights" toggle then fetches real prices for each trip's legs (queries are cached for 24h to stay under the free-tier rate limit). Without credentials, the toggle returns mock data with a `(mock)` badge in the UI.
+
+See [`docs/design/0009-flights-amadeus.md`](docs/design/0009-flights-amadeus.md) for the integration details.
 
 ## Development
 

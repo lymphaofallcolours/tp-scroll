@@ -16,3 +16,9 @@ export {
   amadeusFromEnv,
 } from "./amadeus.js";
 export { DEFAULT_AIRPORTS, resolveIata } from "./airports.js";
+export {
+  annotatePlan,
+  type AnnotatedTripPlan,
+  type FlightAnnotation,
+  type AnnotatePlanArgs,
+} from "./annotate.js";

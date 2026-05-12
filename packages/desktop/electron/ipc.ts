@@ -9,6 +9,7 @@ import {
   optimize,
   type Session,
   type DayInt,
+  type TripPlan,
 } from "@tp-scroll/core";
 import {
   DateHolidaysProvider,
@@ -20,6 +21,13 @@ import {
   JsonFileSessionStore,
   type SessionStore,
 } from "@tp-scroll/adapter-storage";
+import {
+  CachingFlightProvider,
+  MockFlightProvider,
+  amadeusFromEnv,
+  annotatePlan,
+  type FlightProvider,
+} from "@tp-scroll/adapter-flights";
 
 const home = homedir();
 const dataDir = join(home, ".tp-scroll");
@@ -32,6 +40,11 @@ const store: SessionStore = new JsonFileSessionStore({ baseDir: sessionsDir });
 const holidayProvider: HolidayProvider = offline
   ? new DateHolidaysProvider()
   : new FallbackHolidayProvider(new NagerHolidayProvider(), new DateHolidaysProvider());
+
+const realFlight: FlightProvider | null = offline ? null : amadeusFromEnv();
+const flightProvider: FlightProvider = new CachingFlightProvider(
+  realFlight ?? new MockFlightProvider(),
+);
 
 const loadActive = async (): Promise<string | null> => {
   try {
@@ -80,4 +93,17 @@ export const registerIpc = (): void => {
   );
 
   ipcMain.handle("clock:today", (): DayInt => SystemClock.today());
+
+  ipcMain.handle("flights:providerName", () => flightProvider.name);
+  ipcMain.handle(
+    "flights:annotate",
+    async (_, req: { plan: TripPlan; origin: string; destination: string }) => {
+      return annotatePlan({
+        plan: req.plan,
+        provider: flightProvider,
+        origin: req.origin,
+        destination: req.destination,
+      });
+    },
+  );
 };
