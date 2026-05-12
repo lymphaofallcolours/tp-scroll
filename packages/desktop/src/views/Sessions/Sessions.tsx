@@ -3,6 +3,7 @@ import {
   dayIntFromIso,
   fromDayInt,
   isoFromDayInt,
+  type FlightConstraints,
 } from "@tp-scroll/core";
 
 import { useSessionStore } from "../../state/session.js";
@@ -16,6 +17,7 @@ export const Sessions = (): JSX.Element | null => {
   const switchSession = useSessionStore((s) => s.switchSession);
   const deleteSession = useSessionStore((s) => s.deleteSession);
   const rollActiveCycle = useSessionStore((s) => s.rollActiveCycle);
+  const setFlightConstraints = useSessionStore((s) => s.setFlightConstraints);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -172,6 +174,13 @@ export const Sessions = (): JSX.Element | null => {
               {rollError && <p className={styles.error}>{rollError}</p>}
             </div>
           )}
+
+          {session && (
+            <FlightConstraintsCard
+              constraints={session.flightConstraints ?? null}
+              onSave={async (next) => setFlightConstraints(next)}
+            />
+          )}
         </section>
 
         <section className={styles.column}>
@@ -217,5 +226,133 @@ export const Sessions = (): JSX.Element | null => {
         </section>
       </div>
     </main>
+  );
+};
+
+const FlightConstraintsCard = ({
+  constraints,
+  onSave,
+}: {
+  constraints: FlightConstraints | null;
+  onSave: (next: FlightConstraints | null) => Promise<void>;
+}): JSX.Element => {
+  const [maxDuration, setMaxDuration] = useState(
+    constraints?.maxDurationMinutes !== undefined ? String(constraints.maxDurationMinutes) : "",
+  );
+  const [departAfter, setDepartAfter] = useState(
+    constraints?.departAfterHour !== undefined ? String(constraints.departAfterHour) : "",
+  );
+  const [arriveBefore, setArriveBefore] = useState(
+    constraints?.arriveBeforeHour !== undefined ? String(constraints.arriveBeforeHour) : "",
+  );
+  const [combineMode, setCombineMode] = useState<"and" | "or">(
+    constraints?.combineMode ?? "and",
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const onApply = async (): Promise<void> => {
+    setError(null);
+    const numOrUndef = (s: string): number | undefined => {
+      if (s.trim().length === 0) return undefined;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const next: FlightConstraints = {
+      ...(numOrUndef(maxDuration) !== undefined ? { maxDurationMinutes: numOrUndef(maxDuration)! } : {}),
+      ...(numOrUndef(departAfter) !== undefined ? { departAfterHour: numOrUndef(departAfter)! } : {}),
+      ...(numOrUndef(arriveBefore) !== undefined ? { arriveBeforeHour: numOrUndef(arriveBefore)! } : {}),
+      combineMode,
+    };
+    const allEmpty =
+      next.maxDurationMinutes === undefined &&
+      next.departAfterHour === undefined &&
+      next.arriveBeforeHour === undefined;
+    try {
+      await onSave(allEmpty ? null : next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const onClear = async (): Promise<void> => {
+    setMaxDuration("");
+    setDepartAfter("");
+    setArriveBefore("");
+    setError(null);
+    await onSave(null);
+  };
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>Flight constraints</h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Optional. Used by the price-aware planner to drop or down-rank candidates whose flights
+        don't fit your travel preferences.
+      </p>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Max duration (min)</span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            value={maxDuration}
+            placeholder="e.g. 240"
+            onChange={(e) => setMaxDuration(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Combine</span>
+          <select
+            className={styles.input}
+            value={combineMode}
+            onChange={(e) => setCombineMode(e.target.value as "and" | "or")}
+          >
+            <option value="and">AND — all must pass</option>
+            <option value="or">OR — at least one</option>
+          </select>
+        </div>
+      </div>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Depart after (hour)</span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            max={23}
+            value={departAfter}
+            placeholder="e.g. 18"
+            onChange={(e) => setDepartAfter(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Arrive before (hour)</span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            max={23}
+            value={arriveBefore}
+            placeholder="e.g. 10"
+            onChange={(e) => setArriveBefore(e.target.value)}
+          />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-3)" }}>
+        <button type="button" className={styles.primaryBtn} onClick={() => void onApply()}>
+          Apply
+        </button>
+        <button
+          type="button"
+          className={styles.linkBtn}
+          onClick={() => void onClear()}
+          style={{ alignSelf: "center" }}
+        >
+          clear
+        </button>
+      </div>
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
   );
 };

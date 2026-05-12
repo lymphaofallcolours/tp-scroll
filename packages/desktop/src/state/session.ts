@@ -3,6 +3,7 @@ import {
   defaultSession,
   fromDayInt,
   rollCycle,
+  type FlightConstraints,
   type LeaveBucket,
   type LeaveCycle,
   type Session,
@@ -41,6 +42,7 @@ type SessionState = {
     end: number;
     totalDays: number;
   }) => Promise<void>;
+  readonly setFlightConstraints: (constraints: FlightConstraints | null) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -206,5 +208,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await persist(rolled, get().isDemo);
     const holidays = await loadHolidaysFor(rolled);
     set({ holidays });
+  },
+
+  setFlightConstraints: async (constraints) => {
+    const s = get().session;
+    if (!s) return;
+    const next = touch(
+      constraints === null
+        ? { ...s, flightConstraints: undefined }
+        : { ...s, flightConstraints: constraints },
+    );
+    set({ session: next });
+    await persist(next, get().isDemo);
   },
 }));

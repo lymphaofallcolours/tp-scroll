@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   FixedClock,
+  compareScores,
   isoFromDayInt,
   optimize,
+  passesFlightConstraints,
   scorePlan,
+  type CandidateFlightInfo,
   type TripPlan,
 } from "@tp-scroll/core";
-import type { AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
+import { legInfoOf, type AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
 
 import { bridge } from "../../api/bridge.js";
 import { useSessionStore } from "../../state/session.js";
@@ -28,6 +31,7 @@ export const Plan = (): JSX.Element | null => {
   const [topK, setTopK] = useState(5);
   const [diverse, setDiverse] = useState(true);
   const [fetchFlights, setFetchFlights] = useState(false);
+  const [priceAware, setPriceAware] = useState(false);
   const [state, setState] = useState<RunState>({ kind: "idle" });
   const [annotated, setAnnotated] = useState<ReadonlyArray<AnnotatedTripPlan> | null>(null);
   const [flightState, setFlightState] = useState<FlightFetchState>("idle");
@@ -88,6 +92,45 @@ export const Plan = (): JSX.Element | null => {
     }
   };
 
+  // v1.7 post-processing applied AFTER plans + annotations are both available.
+  // The optimizer's full flight-aware path (engine-side) requires pre-fetching
+  // flight info for every candidate, which is fine on the mock provider but
+  // would burn through Amadeus rate limits. The renderer instead applies the
+  // same constraint check + price tiebreaker over the existing top-K so the
+  // visible behavior matches without the bandwidth cost.
+  const displayedPlans = useMemo(() => {
+    if (state.kind !== "done") return [] as ReadonlyArray<TripPlan>;
+    let plans = state.plans;
+    if (annotated && session.flightConstraints) {
+      const constraints = session.flightConstraints;
+      plans = plans.filter((_, i) => {
+        const a = annotated[i];
+        if (!a) return true;
+        return a.annotations.every((leg) => {
+          const out = leg.outbound ? legInfoOf(leg.outbound) : undefined;
+          const inb = leg.inbound ? legInfoOf(leg.inbound) : undefined;
+          const info: CandidateFlightInfo = {
+            ...(out !== undefined ? { outbound: out } : {}),
+            ...(inb !== undefined ? { inbound: inb } : {}),
+          };
+          return passesFlightConstraints(info, constraints);
+        });
+      });
+    }
+    if (annotated && priceAware) {
+      const totals = new Map<TripPlan, number>();
+      for (let i = 0; i < state.plans.length; i++) {
+        totals.set(state.plans[i]!, annotated[i]?.totalPriceMinor ?? Number.MAX_SAFE_INTEGER);
+      }
+      plans = [...plans].sort((a, b) => {
+        const cmp = compareScores(scorePlan(a), scorePlan(b));
+        if (cmp !== 0) return cmp;
+        return (totals.get(a) ?? 0) - (totals.get(b) ?? 0);
+      });
+    }
+    return plans;
+  }, [state, annotated, session.flightConstraints, priceAware]);
+
   const isMockFlights = (flightProviderName ?? "").includes("mock");
 
   return (
@@ -124,6 +167,18 @@ export const Plan = (): JSX.Element | null => {
               onChange={(e) => setFetchFlights(e.target.checked)}
             />
             flights {isMockFlights ? "(mock)" : ""}
+          </label>
+          <label
+            className={styles.checkboxControl}
+            title="Re-rank top-K plans by total flight price among ties (requires flights)."
+          >
+            <input
+              type="checkbox"
+              checked={priceAware}
+              disabled={!fetchFlights}
+              onChange={(e) => setPriceAware(e.target.checked)}
+            />
+            price-aware
           </label>
           <button
             type="button"
@@ -185,20 +240,25 @@ export const Plan = (): JSX.Element | null => {
           </div>
 
           <div className={styles.plans}>
-            {state.plans.length === 0 ? (
+            {displayedPlans.length === 0 ? (
               <div className={styles.emptyPlans}>
-                No feasible plans within your budget.
+                {state.plans.length === 0
+                  ? "No feasible plans within your budget."
+                  : "No plans satisfy the active flight constraints."}
               </div>
             ) : (
-              state.plans.map((plan, i) => (
-                <PlanCard
-                  key={i}
-                  plan={plan}
-                  rank={i + 1}
-                  annotated={annotated?.[i] ?? null}
-                  isMockFlights={isMockFlights}
-                />
-              ))
+              displayedPlans.map((plan, i) => {
+                const originalIdx = state.plans.indexOf(plan);
+                return (
+                  <PlanCard
+                    key={i}
+                    plan={plan}
+                    rank={i + 1}
+                    annotated={originalIdx >= 0 ? annotated?.[originalIdx] ?? null : null}
+                    isMockFlights={isMockFlights}
+                  />
+                );
+              })
             )}
           </div>
         </>
