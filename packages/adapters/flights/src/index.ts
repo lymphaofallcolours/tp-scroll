@@ -2,7 +2,9 @@ export {
   type FlightProvider,
   type FlightQuote,
   type CheapestDirectArgs,
+  type LegInfo,
   priceFormat,
+  legInfoOf,
 } from "./provider.js";
 export { MockFlightProvider } from "./mock.js";
 export {
@@ -13,6 +15,7 @@ export {
   AmadeusFlightProvider,
   type AmadeusOptions,
   parseIsoDurationMinutes,
+  parseAtHour,
   amadeusFromEnv,
 } from "./amadeus.js";
 export { DEFAULT_AIRPORTS, resolveIata } from "./airports.js";

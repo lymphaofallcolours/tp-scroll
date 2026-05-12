@@ -22,6 +22,9 @@ export class MockFlightProvider implements FlightProvider {
     const carriers = ["LH", "IB", "BA", "AF", "KL", "FR", "U2"];
     const carrier = carriers[h % carriers.length]!;
     const durationMinutes = 90 + (h % 240);
+    // Spread departures across a plausible 06:00-22:00 window.
+    const departHour = 6 + ((h >> 3) % 17);
+    const arriveHour = (departHour + Math.ceil(durationMinutes / 60)) % 24;
     return {
       origin: args.origin,
       destination: args.destination,
@@ -31,6 +34,8 @@ export class MockFlightProvider implements FlightProvider {
       carrier,
       stops: 0,
       durationMinutes,
+      departHour,
+      arriveHour,
     };
   }
 }

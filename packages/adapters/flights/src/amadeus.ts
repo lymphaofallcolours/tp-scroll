@@ -28,11 +28,26 @@ const AmadeusPrice = z.object({
   total: z.string(),
 });
 
+const AmadeusSegmentEndpoint = z.object({
+  at: z.string().optional(),
+  iataCode: z.string().optional(),
+});
+
+const AmadeusSegment = z.object({
+  departure: AmadeusSegmentEndpoint.optional(),
+  arrival: AmadeusSegmentEndpoint.optional(),
+});
+
 const AmadeusOffer = z.object({
   price: AmadeusPrice,
   validatingAirlineCodes: z.array(z.string()).optional(),
   itineraries: z
-    .array(z.object({ duration: z.string().optional() }))
+    .array(
+      z.object({
+        duration: z.string().optional(),
+        segments: z.array(AmadeusSegment).optional(),
+      }),
+    )
     .min(1),
   numberOfBookableSeats: z.number().optional(),
 });
@@ -53,6 +68,19 @@ export const parseIsoDurationMinutes = (s: string | undefined): number | undefin
   const minutes = m[2] ? parseInt(m[2], 10) : 0;
   const total = hours * 60 + minutes;
   return total === 0 ? undefined : total;
+};
+
+/**
+ * Extract the hour (0-23) from an Amadeus segment "at" timestamp, e.g.
+ * "2026-04-10T18:45:00". Returns undefined for malformed input.
+ */
+export const parseAtHour = (s: string | undefined): number | undefined => {
+  if (s === undefined) return undefined;
+  const m = /^\d{4}-\d{2}-\d{2}T(\d{2}):/.exec(s);
+  if (!m) return undefined;
+  const hour = parseInt(m[1]!, 10);
+  if (Number.isNaN(hour) || hour < 0 || hour > 23) return undefined;
+  return hour;
 };
 
 export class AmadeusFlightProvider implements FlightProvider {
@@ -106,8 +134,14 @@ export class AmadeusFlightProvider implements FlightProvider {
     );
 
     const priceMinor = Math.round(parseFloat(cheapest.price.total) * 100);
-    const durationMinutes = parseIsoDurationMinutes(cheapest.itineraries[0]?.duration);
+    const firstItin = cheapest.itineraries[0];
+    const durationMinutes = parseIsoDurationMinutes(firstItin?.duration);
     const carrier = cheapest.validatingAirlineCodes?.[0];
+    const segments = firstItin?.segments;
+    const firstSeg = segments?.[0];
+    const lastSeg = segments && segments.length > 0 ? segments[segments.length - 1] : undefined;
+    const departHour = parseAtHour(firstSeg?.departure?.at);
+    const arriveHour = parseAtHour(lastSeg?.arrival?.at);
 
     return {
       origin,
@@ -118,6 +152,8 @@ export class AmadeusFlightProvider implements FlightProvider {
       stops: 0,
       ...(carrier !== undefined ? { carrier } : {}),
       ...(durationMinutes !== undefined ? { durationMinutes } : {}),
+      ...(departHour !== undefined ? { departHour } : {}),
+      ...(arriveHour !== undefined ? { arriveHour } : {}),
     };
   }
 
