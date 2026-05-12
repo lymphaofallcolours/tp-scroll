@@ -1,6 +1,15 @@
 import { create } from "zustand";
-import { fromDayInt, type Session, type Trip } from "@tp-scroll/core";
+import {
+  defaultSession,
+  fromDayInt,
+  rollCycle,
+  type LeaveBucket,
+  type LeaveCycle,
+  type Session,
+  type Trip,
+} from "@tp-scroll/core";
 import type { Holiday } from "@tp-scroll/adapter-holidays";
+import type { SessionSummary } from "@tp-scroll/adapter-storage";
 
 import { bridge } from "../api/bridge.js";
 import { buildDemoSession } from "../demo/demoSession.js";
@@ -13,10 +22,25 @@ type SessionState = {
   readonly holidays: ReadonlyArray<Holiday>;
   readonly isDemo: boolean;
   readonly errorMessage: string | null;
+  readonly summaries: ReadonlyArray<SessionSummary>;
   readonly init: () => Promise<void>;
+  readonly refreshSummaries: () => Promise<void>;
   readonly addTrip: (trip: Trip) => Promise<void>;
   readonly updateTrip: (trip: Trip) => Promise<void>;
   readonly deleteTrip: (tripId: string) => Promise<void>;
+  readonly createSession: (input: {
+    name: string;
+    residenceCountry: string;
+    homeCountry: string;
+  }) => Promise<void>;
+  readonly switchSession: (id: string) => Promise<void>;
+  readonly deleteSession: (id: string) => Promise<void>;
+  readonly rollActiveCycle: (input: {
+    name: string;
+    start: number;
+    end: number;
+    totalDays: number;
+  }) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -29,16 +53,27 @@ const touch = (session: Session): Session => ({
   updatedAt: new Date().toISOString(),
 });
 
+const loadHolidaysFor = async (session: Session): Promise<ReadonlyArray<Holiday>> => {
+  try {
+    const year = fromDayInt(session.cycle.start).year;
+    return await bridge.holidays.forCountry(session.residenceCountry, year);
+  } catch {
+    return [];
+  }
+};
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   status: "idle",
   session: null,
   holidays: [],
   isDemo: false,
   errorMessage: null,
+  summaries: [],
 
   init: async () => {
     set({ status: "loading" });
     try {
+      const summaries = await bridge.sessions.list();
       const activeId = await bridge.active.get();
       let session: Session | null = null;
       if (activeId !== null) {
@@ -48,21 +83,40 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           session = null;
         }
       }
+      // Fall back to the first available session if there's no active one.
+      if (session === null && summaries.length > 0) {
+        try {
+          session = await bridge.sessions.load(summaries[0]!.id);
+          await bridge.active.set(summaries[0]!.id);
+        } catch {
+          session = null;
+        }
+      }
       const isDemo = session === null;
       const actual = session ?? buildDemoSession();
-      let holidays: ReadonlyArray<Holiday> = [];
-      try {
-        const year = fromDayInt(actual.cycle.start).year;
-        holidays = await bridge.holidays.forCountry(actual.residenceCountry, year);
-      } catch {
-        holidays = [];
-      }
-      set({ status: "ready", session: actual, holidays, isDemo, errorMessage: null });
+      const holidays = await loadHolidaysFor(actual);
+      set({
+        status: "ready",
+        session: actual,
+        holidays,
+        isDemo,
+        errorMessage: null,
+        summaries,
+      });
     } catch (err) {
       set({
         status: "error",
         errorMessage: err instanceof Error ? err.message : String(err),
       });
+    }
+  },
+
+  refreshSummaries: async () => {
+    try {
+      const summaries = await bridge.sessions.list();
+      set({ summaries });
+    } catch {
+      // ignore
     }
   },
 
@@ -91,5 +145,66 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const next = touch({ ...s, trips: s.trips.filter((t) => t.id !== tripId) });
     set({ session: next });
     await persist(next, get().isDemo);
+  },
+
+  createSession: async ({ name, residenceCountry, homeCountry }) => {
+    const id = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+    const fresh = defaultSession({ id, name, residenceCountry, homeCountry });
+    await bridge.sessions.save(fresh);
+    await bridge.active.set(id);
+    const holidays = await loadHolidaysFor(fresh);
+    const summaries = await bridge.sessions.list();
+    set({ session: fresh, holidays, isDemo: false, summaries });
+  },
+
+  switchSession: async (id) => {
+    const session = await bridge.sessions.load(id);
+    await bridge.active.set(id);
+    const holidays = await loadHolidaysFor(session);
+    set({ session, holidays, isDemo: false });
+  },
+
+  deleteSession: async (id) => {
+    await bridge.sessions.delete(id);
+    const summaries = await bridge.sessions.list();
+    set({ summaries });
+    // If we deleted the active one, fall back to first available or demo.
+    if (get().session?.id === id) {
+      if (summaries.length > 0) {
+        await get().switchSession(summaries[0]!.id);
+      } else {
+        const demo = buildDemoSession();
+        const holidays = await loadHolidaysFor(demo);
+        set({ session: demo, holidays, isDemo: true });
+      }
+    }
+  },
+
+  rollActiveCycle: async ({ name, start, end, totalDays }) => {
+    const s = get().session;
+    if (!s) return;
+    const newCycle: LeaveCycle = {
+      ...s.cycle,
+      id: `${s.id}-cycle-${start}`,
+      name,
+      start,
+      end,
+      totalDays,
+    };
+    const newBuckets: LeaveBucket[] = [
+      {
+        id: "annual",
+        name: "annual",
+        cycleId: newCycle.id,
+        totalDays,
+      },
+    ];
+    const rolled = rollCycle(s, newCycle, newBuckets);
+    set({ session: rolled });
+    await persist(rolled, get().isDemo);
+    const holidays = await loadHolidaysFor(rolled);
+    set({ holidays });
   },
 }));

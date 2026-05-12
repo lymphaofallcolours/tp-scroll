@@ -6,6 +6,7 @@ import { useUiStore } from "./state/ui.js";
 import { Burndown } from "./views/Burndown/Burndown.js";
 import { Calendar } from "./views/Calendar/Calendar.js";
 import { Plan } from "./views/Plan/Plan.js";
+import { Sessions } from "./views/Sessions/Sessions.js";
 import { Trips } from "./views/Trips/Trips.js";
 
 export const App = (): JSX.Element => {
@@ -45,11 +46,7 @@ export const App = (): JSX.Element => {
       {view === "trips" && <Trips />}
       {view === "plan" && <Plan />}
       {view === "burndown" && <Burndown />}
-      {view === "sessions" && (
-        <main style={{ padding: 48, color: "var(--ink-tertiary)", fontFamily: "var(--font-display)", fontStyle: "italic" }}>
-          sessions view — coming in a later v1.0 PR.
-        </main>
-      )}
+      {view === "sessions" && <Sessions />}
     </>
   );
 };
