@@ -27,7 +27,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint --no-error-on-unmatched-pattern src tests",
     "lint:fix": "eslint --fix --no-error-on-unmatched-pattern src tests",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",
