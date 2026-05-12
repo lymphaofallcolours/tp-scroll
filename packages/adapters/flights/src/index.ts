@@ -9,3 +9,10 @@ export {
   CachingFlightProvider,
   type CachingFlightProviderOptions,
 } from "./cache.js";
+export {
+  AmadeusFlightProvider,
+  type AmadeusOptions,
+  parseIsoDurationMinutes,
+  amadeusFromEnv,
+} from "./amadeus.js";
+export { DEFAULT_AIRPORTS, resolveIata } from "./airports.js";
