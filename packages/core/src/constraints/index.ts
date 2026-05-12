@@ -13,9 +13,11 @@ export {
   SchengenWatchSchema,
   type SchengenInput,
   type SchengenResult,
+  type SchengenLoadInput,
   SCHENGEN_ISO2,
   isSchengen,
   evaluateSchengenWindow,
+  currentSchengenLoad,
 } from "./schengen.js";
 
 export { respectsBookingHorizon } from "./booking-horizon.js";

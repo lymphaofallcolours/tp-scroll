@@ -1,5 +1,6 @@
 import {
   computeBucketBalances,
+  currentSchengenLoad,
   evaluateSchengenWindow,
 } from "@tp-scroll/core";
 import type { Command } from "commander";
@@ -30,17 +31,33 @@ export const registerStatusCommand = (program: Command, deps: CliDeps): void => 
       }
 
       if (session.schengen?.enabled) {
+        const watch = session.schengen;
+        const today = deps.clock.today();
+        const currentLoad = currentSchengenLoad({
+          trips: session.trips,
+          residenceCountry: session.residenceCountry,
+          homeCountry: session.homeCountry,
+          today,
+          windowDays: watch.windowDays,
+          session,
+        });
+        deps.stdout(
+          `Schengen:  ${currentLoad} / ${watch.maxDaysInWindow} outside-Schengen days in the trailing ${watch.windowDays}d`,
+        );
+
         const result = evaluateSchengenWindow({
           trips: session.trips,
           residenceCountry: session.residenceCountry,
           homeCountry: session.homeCountry,
           range: { start: session.cycle.start, end: session.cycle.end },
           session,
-          watch: session.schengen,
+          watch,
         });
-        deps.stdout(`Schengen:  max ${result.maxInWindow} outside days in any 180-day window`);
+        deps.stdout(`           max ${result.maxInWindow} in any ${watch.windowDays}d window across the cycle`);
         if (result.violatedOn.length > 0) {
-          deps.stdout(`           ⚠️  ${result.violatedOn.length} day(s) exceed the 90-day cap`);
+          deps.stdout(`           ⚠️  ${result.violatedOn.length} day(s) exceed the ${watch.maxDaysInWindow}d cap`);
+        } else if (currentLoad > watch.maxDaysInWindow * 0.8) {
+          deps.stdout(`           ⚠️  approaching the cap (>80% used)`);
         }
       }
     });

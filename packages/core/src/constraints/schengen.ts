@@ -79,3 +79,39 @@ export const evaluateSchengenWindow = (input: SchengenInput): SchengenResult => 
 
   return { violatedOn, maxInWindow };
 };
+
+export type SchengenLoadInput = {
+  readonly trips: ReadonlyArray<Trip>;
+  readonly residenceCountry: string;
+  readonly homeCountry: string;
+  readonly today: DayInt;
+  readonly windowDays: number;
+  readonly session: Session;
+};
+
+export const currentSchengenLoad = (input: SchengenLoadInput): number => {
+  const residenceOutside = !isSchengen(input.residenceCountry);
+  const homeOutside = !isSchengen(input.homeCountry);
+
+  if (!residenceOutside && !homeOutside) return 0;
+
+  const windowStart = input.today - input.windowDays + 1;
+  const tripLocation = new Map<DayInt, "residence" | "home" | "transit">();
+  for (const trip of input.trips) {
+    if (trip.return < windowStart || trip.departure > input.today) continue;
+    for (const r of resolveAttribution(trip, input.session, EMPTY_HOLIDAYS)) {
+      if (r.day >= windowStart && r.day <= input.today) {
+        tripLocation.set(r.day, r.location);
+      }
+    }
+  }
+
+  let outside = 0;
+  for (let d = windowStart; d <= input.today; d++) {
+    const loc = tripLocation.get(d);
+    const here =
+      loc === undefined || loc === "residence" ? residenceOutside : homeOutside;
+    if (here) outside++;
+  }
+  return outside;
+};

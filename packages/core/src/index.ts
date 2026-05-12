@@ -61,9 +61,11 @@ export {
   SchengenWatchSchema,
   type SchengenInput,
   type SchengenResult,
+  type SchengenLoadInput,
   SCHENGEN_ISO2,
   isSchengen,
   evaluateSchengenWindow,
+  currentSchengenLoad,
   respectsBookingHorizon,
 } from "./constraints/index.js";
 

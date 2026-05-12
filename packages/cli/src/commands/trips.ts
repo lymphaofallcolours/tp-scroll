@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { dayIntFromIso, isoFromDayInt, type Trip } from "@tp-scroll/core";
+import { currentSchengenLoad, dayIntFromIso, isoFromDayInt, type Trip } from "@tp-scroll/core";
 import type { Command } from "commander";
 
 import type { CliDeps } from "../main.js";
@@ -40,8 +40,27 @@ export const registerTripsCommands = (program: Command, deps: CliDeps): void => 
           dayOverrides: [],
           ...(opts.note !== undefined ? { notes: opts.note } : {}),
         };
-        await saveAndTouch(deps, { ...session, trips: [...session.trips, trip] });
+        const next = { ...session, trips: [...session.trips, trip] };
+        await saveAndTouch(deps, next);
         deps.stdout(`Added trip ${trip.id}: ${opts.from} → ${opts.to} (bucket ${bucketId})`);
+
+        if (session.schengen?.enabled) {
+          const watch = session.schengen;
+          const today = deps.clock.today();
+          const loadAfter = currentSchengenLoad({
+            trips: next.trips,
+            residenceCountry: next.residenceCountry,
+            homeCountry: next.homeCountry,
+            today,
+            windowDays: watch.windowDays,
+            session: next,
+          });
+          if (loadAfter > watch.maxDaysInWindow) {
+            deps.stdout(
+              `⚠️  Schengen: this trip pushes the trailing ${watch.windowDays}d window to ${loadAfter} outside-Schengen days (cap ${watch.maxDaysInWindow})`,
+            );
+          }
+        }
       },
     );
 
