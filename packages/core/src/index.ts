@@ -95,4 +95,5 @@ export {
   searchTopK,
   type OptimizeOptions,
   optimize,
+  planSimilarity,
 } from "./optimizer/index.js";

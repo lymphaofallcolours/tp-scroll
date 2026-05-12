@@ -16,6 +16,7 @@ export type OptimizeOptions = {
   readonly carryoverFromPrev?: number;
   readonly maxNodes?: number;
   readonly planningBucketId?: string;
+  readonly diversityThreshold?: number;
 };
 
 export const optimize = (session: Session, options: OptimizeOptions): TripPlan[] => {
@@ -60,6 +61,9 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
     anchors: session.anchors,
     topK: options.topK ?? 5,
     ...(options.maxNodes !== undefined ? { maxNodes: options.maxNodes } : {}),
+    ...(options.diversityThreshold !== undefined
+      ? { diversityThreshold: options.diversityThreshold }
+      : {}),
   });
 };
 
@@ -67,3 +71,4 @@ export { type TripPlan } from "./plan.js";
 export { type PlanScore, scorePlan, compareScores } from "./score.js";
 export { type Candidate, generateCandidates } from "./candidates.js";
 export { type SearchOptions, searchTopK } from "./search.js";
+export { planSimilarity } from "./diversity.js";
