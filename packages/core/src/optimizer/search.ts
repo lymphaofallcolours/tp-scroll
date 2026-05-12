@@ -11,14 +11,16 @@ export type SearchOptions = {
   readonly topK: number;
   readonly maxNodes?: number;
   readonly maxCandidates?: number;
+  /**
+   * Reserved for future use. Currently only exact-duplicate trip-sets are
+   * deduplicated; cross-cluster diversity needs a different search architecture
+   * (see memory_docs/plans/v0.3.md).
+   */
   readonly diversityThreshold?: number;
 };
 
 const DEFAULT_MAX_NODES = 200_000;
 const DEFAULT_MAX_CANDIDATES = 800;
-const DEFAULT_DIVERSITY_THRESHOLD = 0.7;
-const POOL_MULTIPLIER = 4;
-const MIN_POOL_SIZE = 20;
 
 const capCandidates = (candidates: Candidate[], cap: number): Candidate[] => {
   if (candidates.length <= cap) return candidates;
@@ -29,45 +31,11 @@ const capCandidates = (candidates: Candidate[], cap: number): Candidate[] => {
 const leverage = (c: Candidate): number =>
   c.leaveCost === 0 ? Number.POSITIVE_INFINITY : c.awayDays / c.leaveCost;
 
-const selectAtThreshold = (
-  pool: ReadonlyArray<TripPlan>,
-  k: number,
-  threshold: number,
-): TripPlan[] => {
-  const result: TripPlan[] = [];
-  for (const cand of pool) {
-    if (result.length === k) break;
-    const maxSim =
-      result.length === 0
-        ? 0
-        : result.reduce((m, r) => Math.max(m, planSimilarity(cand, r)), 0);
-    if (maxSim < threshold) result.push(cand);
-  }
-  return result;
-};
-
-const selectDiverseTopK = (
-  pool: ReadonlyArray<TripPlan>,
-  k: number,
-  startingThreshold: number,
-): TripPlan[] => {
-  // Try progressively looser thresholds until we hit K. Always picks pool[0]
-  // first; subsequent picks are the most-diverse-still-good-by-score plans.
-  let threshold = startingThreshold;
-  let result = selectAtThreshold(pool, k, threshold);
-  while (result.length < k && threshold > 0) {
-    threshold = Math.max(0, threshold - 0.1);
-    result = selectAtThreshold(pool, k, threshold);
-  }
-  // Final fallback: fill with best-by-score remainder if even threshold=0 didn't reach K.
-  if (result.length < k) {
-    for (const p of pool) {
-      if (result.length === k) break;
-      if (!result.includes(p)) result.push(p);
-    }
-  }
-  return result;
-};
+const tripSetKey = (plan: TripPlan): string =>
+  plan.trips
+    .map((t) => `${t.departure}-${t.return}`)
+    .sort()
+    .join("|");
 
 export const searchTopK = (candidates: Candidate[], options: SearchOptions): TripPlan[] => {
   const capped = capCandidates(candidates, options.maxCandidates ?? DEFAULT_MAX_CANDIDATES);
@@ -79,10 +47,30 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
     return j;
   });
 
+  // LP-relaxation (fractional knapsack) upper bound on additional awayDays
+  // achievable from candidates[i..] under budgetLeft. Walks candidates in
+  // leverage-descending order, accumulating awayDays; the boundary candidate
+  // contributes a fractional share. Always ≥ true integer optimum and tighter
+  // than the v0.2 sum-of-affordable form.
+  const leverageOrder = [...sorted.keys()].sort(
+    (a, b) => leverage(sorted[b]!) - leverage(sorted[a]!),
+  );
+
   const remainingBoundFor = (i: number, budgetLeft: number): number => {
     let bound = 0;
-    for (let k = i; k < sorted.length; k++) {
-      if (sorted[k]!.leaveCost <= budgetLeft) bound += sorted[k]!.awayDays;
+    let budgetUsed = 0;
+    for (const idx of leverageOrder) {
+      if (idx < i) continue;
+      const c = sorted[idx]!;
+      const remaining = budgetLeft - budgetUsed;
+      if (remaining <= 0) break;
+      if (c.leaveCost <= remaining) {
+        bound += c.awayDays;
+        budgetUsed += c.leaveCost;
+      } else if (c.leaveCost > 0) {
+        bound += (remaining / c.leaveCost) * c.awayDays;
+        break;
+      }
     }
     return bound;
   };
@@ -90,23 +78,9 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   const baselineAnchor = anchorCoverageScore(options.anchors, () => false);
   const k = Math.max(1, options.topK);
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
-  const diversityThreshold = options.diversityThreshold ?? DEFAULT_DIVERSITY_THRESHOLD;
-  const poolSize = Math.max(MIN_POOL_SIZE, k * POOL_MULTIPLIER);
 
-  // Pool is maintained UNSORTED during search. We track worstIdx (the
-  // lowest-scored entry's array index) to do O(1) worst-replacement.
-  // pool[k-1]-by-score for pruning is approximated by a periodically-refreshed
-  // kth-best cache. Final sort happens once before MMR selection.
-  const pool: TripPlan[] = [];
-  const poolKeys = new Set<string>();
-  let worstIdx = -1;
-  let kthBestAwayDays = -Infinity;
-
-  const tripSetKey = (plan: TripPlan): string =>
-    plan.trips
-      .map((t) => `${t.departure}-${t.return}`)
-      .sort()
-      .join("|");
+  const topK: TripPlan[] = [];
+  const seenTripSets = new Set<string>();
 
   const planFromPicked = (picked: ReadonlyArray<Candidate>): TripPlan => ({
     trips: picked.map((c) => c.trip),
@@ -116,58 +90,39 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
     tripCount: picked.length,
   });
 
-  const refreshWorstAndKth = (): void => {
-    if (pool.length === 0) {
-      worstIdx = -1;
-      kthBestAwayDays = -Infinity;
-      return;
-    }
-    let wIdx = 0;
-    for (let i = 1; i < pool.length; i++) {
-      if (compareScores(scorePlan(pool[i]!), scorePlan(pool[wIdx]!)) > 0) wIdx = i;
-    }
-    worstIdx = wIdx;
-    if (pool.length < k) {
-      kthBestAwayDays = -Infinity;
-    } else {
-      // K-th best by score, single linear partial-sort
-      const idxs = pool.map((_, i) => i);
-      idxs.sort((a, b) => compareScores(scorePlan(pool[a]!), scorePlan(pool[b]!)));
-      kthBestAwayDays = pool[idxs[k - 1]!]!.awayDaysTotal;
-    }
-  };
-
-  const consider = (plan: TripPlan): void => {
+  const considerPlan = (plan: TripPlan): void => {
+    // Exact-duplicate trip-sets are skipped — they only differ by candidate id,
+    // which is internal noise.
     const key = tripSetKey(plan);
-    if (poolKeys.has(key)) return;
+    if (seenTripSets.has(key)) return;
 
-    if (pool.length < poolSize) {
-      pool.push(plan);
-      poolKeys.add(key);
-      refreshWorstAndKth();
+    const score = scorePlan(plan);
+    if (topK.length < k) {
+      seenTripSets.add(key);
+      topK.push(plan);
+      topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
       return;
     }
-
-    const worst = pool[worstIdx]!;
-    if (compareScores(scorePlan(plan), scorePlan(worst)) < 0) {
-      poolKeys.delete(tripSetKey(worst));
-      pool[worstIdx] = plan;
-      poolKeys.add(key);
-      refreshWorstAndKth();
+    const worst = topK[topK.length - 1]!;
+    if (compareScores(score, scorePlan(worst)) < 0) {
+      seenTripSets.delete(tripSetKey(worst));
+      seenTripSets.add(key);
+      topK[topK.length - 1] = plan;
+      topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
     }
   };
 
   let nodes = 0;
   const picked: Candidate[] = [];
 
-  const pruneThreshold = (): number => kthBestAwayDays;
-
   const explore = (i: number, budgetLeft: number, awayDaysSoFar: number): void => {
     if (++nodes > maxNodes) return;
-    consider(planFromPicked(picked));
+    considerPlan(planFromPicked(picked));
 
-    const upper = awayDaysSoFar + remainingBoundFor(i, budgetLeft);
-    if (upper < pruneThreshold()) return;
+    if (topK.length >= k) {
+      const upper = awayDaysSoFar + remainingBoundFor(i, budgetLeft);
+      if (upper < topK[topK.length - 1]!.awayDaysTotal) return;
+    }
 
     for (let j = i; j < sorted.length; j++) {
       if (nodes > maxNodes) return;
@@ -181,7 +136,8 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
 
   explore(0, options.budget, 0);
 
-  // Single sort at the end before MMR selection.
-  pool.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
-  return selectDiverseTopK(pool, k, diversityThreshold);
+  return topK;
 };
+
+// Re-exported for tests that want to introspect plan-set similarity directly.
+export { planSimilarity };
