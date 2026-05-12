@@ -7,5 +7,6 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   dts: false,
+  noExternal: [/^@tp-scroll\//],
   banner: { js: "#!/usr/bin/env node" },
 });
