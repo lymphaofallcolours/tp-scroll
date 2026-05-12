@@ -17,6 +17,12 @@ export type SearchOptions = {
    * (see memory_docs/plans/v0.3.md).
    */
   readonly diversityThreshold?: number;
+  /**
+   * When true, plans carry a `priceTotalMinor` summed from candidate prices,
+   * and the lexicographic scorer adds a 5th tier (lower price wins among
+   * ties on the existing 4 tiers). Requires candidates' `priceMinor` set.
+   */
+  readonly priceAware?: boolean;
 };
 
 const DEFAULT_MAX_NODES = 200_000;
@@ -59,28 +65,37 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   const baselineAnchor = anchorCoverageScore(options.anchors, () => false);
   const k = Math.max(1, options.topK);
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
+  const priceAware = options.priceAware === true;
 
   const topK: TripPlan[] = [];
 
-  const planFromPicked = (picked: ReadonlyArray<Candidate>): TripPlan => ({
-    trips: picked.map((c) => c.trip),
-    leaveCostTotal: picked.reduce((s, c) => s + c.leaveCost, 0),
-    awayDaysTotal: picked.reduce((s, c) => s + c.awayDays, 0),
-    anchorCoverage: baselineAnchor + picked.reduce((s, c) => s + c.anchorDelta, 0),
-    tripCount: picked.length,
-  });
+  const planFromPicked = (picked: ReadonlyArray<Candidate>): TripPlan => {
+    const priceTotalMinor = priceAware
+      ? picked.reduce<number>((s, c) => s + (c.priceMinor ?? 0), 0)
+      : undefined;
+    return {
+      trips: picked.map((c) => c.trip),
+      leaveCostTotal: picked.reduce((s, c) => s + c.leaveCost, 0),
+      awayDaysTotal: picked.reduce((s, c) => s + c.awayDays, 0),
+      anchorCoverage: baselineAnchor + picked.reduce((s, c) => s + c.anchorDelta, 0),
+      tripCount: picked.length,
+      ...(priceTotalMinor !== undefined ? { priceTotalMinor } : {}),
+    };
+  };
+
+  const score = (p: TripPlan) => scorePlan(p, priceAware);
 
   const considerPlan = (plan: TripPlan): void => {
-    const score = scorePlan(plan);
+    const planScore = score(plan);
     if (topK.length < k) {
       topK.push(plan);
-      topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
+      topK.sort((a, b) => compareScores(score(a), score(b)));
       return;
     }
     const worst = topK[topK.length - 1]!;
-    if (compareScores(score, scorePlan(worst)) < 0) {
+    if (compareScores(planScore, score(worst)) < 0) {
       topK[topK.length - 1] = plan;
-      topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
+      topK.sort((a, b) => compareScores(score(a), score(b)));
     }
   };
 

@@ -1,10 +1,11 @@
 import type { Clock } from "../calendar/clock.js";
 import type { DayInt } from "../calendar/day-int.js";
 import type { DayRange } from "../calendar/range.js";
+import { passesFlightConstraints, type CandidateFlightInfo } from "../constraints/flight.js";
 import type { Session } from "../session/session.js";
 import { computeTripCost } from "../trips/cost.js";
 
-import { generateCandidates } from "./candidates.js";
+import { generateCandidates, type Candidate } from "./candidates.js";
 import type { TripPlan } from "./plan.js";
 import { compareScores, scorePlan } from "./score.js";
 import { searchTopK } from "./search.js";
@@ -30,6 +31,41 @@ export type OptimizeOptions = {
    * search depth.
    */
   readonly seedCount?: number;
+  /**
+   * Per-candidate flight-info lookup. Keyed by `candidate.trip.id`. Returning
+   * undefined means "no data" — the optimizer treats that conservatively
+   * (constraints pass; price is omitted from the score). v1.7.
+   */
+  readonly flightInfo?: (candidateTripId: string) => CandidateFlightInfo | undefined;
+  /**
+   * When true, the score gains a 5th tier on price (lower wins among ties on
+   * the existing 4 tiers). Requires either flightInfo to provide prices or
+   * candidate.priceMinor to be set in advance. v1.7.
+   */
+  readonly priceAware?: boolean;
+};
+
+const annotateCandidates = (
+  candidates: ReadonlyArray<Candidate>,
+  session: Session,
+  flightInfo: ((id: string) => CandidateFlightInfo | undefined) | undefined,
+): Candidate[] => {
+  if (flightInfo === undefined) return [...candidates];
+  const constraints = session.flightConstraints;
+  const out: Candidate[] = [];
+  for (const c of candidates) {
+    const info = flightInfo(c.trip.id);
+    if (constraints !== undefined && info !== undefined && !passesFlightConstraints(info, constraints)) {
+      continue;
+    }
+    if (info === undefined) {
+      out.push(c);
+      continue;
+    }
+    const price = (info.outbound?.priceMinor ?? 0) + (info.inbound?.priceMinor ?? 0);
+    out.push({ ...c, priceMinor: price });
+  }
+  return out;
 };
 
 export const optimize = (session: Session, options: OptimizeOptions): TripPlan[] => {
@@ -61,22 +97,25 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
     bucket.totalDays + carryover - consumedByActuals - session.cycle.bufferAtEnd,
   );
 
-  const candidates = generateCandidates(
+  const rawCandidates = generateCandidates(
     session,
     options.holidays,
     options.clock,
     range,
     bucket.id,
   );
+  const candidates = annotateCandidates(rawCandidates, session, options.flightInfo);
 
   const topK = options.topK ?? 5;
   const seedCount = Math.min(Math.max(1, options.seedCount ?? 1), 12);
+  const priceAware = options.priceAware === true;
 
   if (seedCount === 1) {
     return searchTopK(candidates, {
       budget,
       anchors: session.anchors,
       topK,
+      priceAware,
       ...(options.maxNodes !== undefined ? { maxNodes: options.maxNodes } : {}),
       ...(options.diversityThreshold !== undefined
         ? { diversityThreshold: options.diversityThreshold }
@@ -111,6 +150,7 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
       budget,
       anchors: session.anchors,
       topK,
+      priceAware,
       ...(options.maxNodes !== undefined ? { maxNodes: options.maxNodes } : {}),
     });
     perSegmentPlans.push(plans);
@@ -128,7 +168,9 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
       .map((plans, i) => ({ i, plan: plans[cursors[i]!] }))
       .filter((x) => x.plan !== undefined);
     if (segmentsWithMore.length === 0) break;
-    segmentsWithMore.sort((a, b) => compareScores(scorePlan(a.plan!), scorePlan(b.plan!)));
+    segmentsWithMore.sort((a, b) =>
+      compareScores(scorePlan(a.plan!, priceAware), scorePlan(b.plan!, priceAware)),
+    );
     for (const { i, plan } of segmentsWithMore) {
       if (merged.length === topK) break;
       merged.push(plan!);

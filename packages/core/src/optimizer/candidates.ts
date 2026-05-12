@@ -17,6 +17,11 @@ export type Candidate = {
   readonly leaveCost: number;
   readonly awayDays: number;
   readonly anchorDelta: number;
+  /**
+   * Outbound + inbound priceMinor for this candidate's trip, when the
+   * caller supplied flightInfo. Used by the price-aware scorer in v1.7.
+   */
+  readonly priceMinor?: number;
 };
 
 export const generateCandidates = (
