@@ -20,7 +20,7 @@ export const computeTripCost = (
   let travelDays = 0;
 
   for (const r of resolveAttribution(trip, session, holidays)) {
-    if (r.consumesLeave) leaveCost++;
+    if (r.consumesLeave) leaveCost += r.halfDay ? 0.5 : 1;
     if (r.location !== "residence") awayDays++;
     if (r.isTravelDay) travelDays++;
   }

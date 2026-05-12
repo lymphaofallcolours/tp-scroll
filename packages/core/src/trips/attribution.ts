@@ -9,10 +9,11 @@ export type ResolvedAttribution = {
   readonly day: DayInt;
   readonly consumesLeave: boolean;
   readonly isTravelDay: boolean;
+  readonly halfDay: boolean;
   readonly location: "residence" | "home" | "transit";
 };
 
-type DefaultRule = Omit<ResolvedAttribution, "day">;
+type DefaultRule = Omit<ResolvedAttribution, "day" | "halfDay">;
 
 const defaultRuleFor = (
   day: DayInt,
@@ -26,14 +27,12 @@ const defaultRuleFor = (
 
   if (isTravelEdge) {
     if (session.departureMode === "last-home-day") {
-      // The user is still/back at residence on these days; they fly that day.
       return {
         location: "residence",
         isTravelDay: true,
         consumesLeave: session.travelDayConsumesLeaveByDefault,
       };
     }
-    // "first-away-day": departure and return are already-gone days
     return {
       location: "transit",
       isTravelDay: true,
@@ -41,7 +40,6 @@ const defaultRuleFor = (
     };
   }
 
-  // Interior day
   const isResWeekend = isWeekend(day, session.residenceCountry);
   const isHoliday = holidays.has(day);
   const consumesLeave = (() => {
@@ -68,10 +66,13 @@ export const resolveAttribution = (
   for (const day of iterate({ start: trip.departure, end: trip.return })) {
     const base = defaultRuleFor(day, trip, session, holidays);
     const override = overrideMap.get(day);
+    const halfDayRequested = override?.halfDay === true;
+    const halfDay = halfDayRequested && session.cycle.halfDaysAllowed;
     out.push({
       day,
       consumesLeave: override?.consumesLeave ?? base.consumesLeave,
       isTravelDay: override?.isTravelDay ?? base.isTravelDay,
+      halfDay,
       location: override?.location ?? base.location,
     });
   }

@@ -6,6 +6,7 @@ export const DayAttributionSchema = z.object({
   day: DayIntSchema,
   consumesLeave: z.boolean().optional(),
   isTravelDay: z.boolean().optional(),
+  halfDay: z.boolean().optional(),
   location: z.enum(["residence", "home", "transit"]).optional(),
 });
 

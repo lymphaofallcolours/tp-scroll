@@ -50,6 +50,14 @@ export const SessionSchema = z
   })
   .refine((s) => s.minTripDays <= s.maxTripDays, {
     message: "minTripDays must be <= maxTripDays",
-  });
+  })
+  .refine(
+    (s) =>
+      s.cycle.halfDaysAllowed ||
+      s.trips.every((t) => t.dayOverrides.every((o) => o.halfDay !== true)),
+    {
+      message: "half-day overrides require cycle.halfDaysAllowed=true",
+    },
+  );
 
 export type Session = z.infer<typeof SessionSchema>;
