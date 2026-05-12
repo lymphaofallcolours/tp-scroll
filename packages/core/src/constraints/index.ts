@@ -21,3 +21,11 @@ export {
 } from "./schengen.js";
 
 export { respectsBookingHorizon } from "./booking-horizon.js";
+
+export {
+  type LegInfo,
+  type CandidateFlightInfo,
+  type FlightConstraints,
+  FlightConstraintsSchema,
+  passesFlightConstraints,
+} from "./flight.js";

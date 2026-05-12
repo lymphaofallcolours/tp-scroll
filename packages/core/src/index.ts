@@ -67,6 +67,11 @@ export {
   evaluateSchengenWindow,
   currentSchengenLoad,
   respectsBookingHorizon,
+  type LegInfo,
+  type CandidateFlightInfo,
+  type FlightConstraints,
+  FlightConstraintsSchema,
+  passesFlightConstraints,
 } from "./constraints/index.js";
 
 export {

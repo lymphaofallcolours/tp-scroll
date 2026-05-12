@@ -1,4 +1,5 @@
-import type { DayInt } from "@tp-scroll/core";
+import type { DayInt, LegInfo } from "@tp-scroll/core";
+export type { LegInfo };
 
 export type FlightQuote = {
   readonly origin: string;
@@ -19,18 +20,9 @@ export type FlightQuote = {
 };
 
 /**
- * Pure-data projection of a FlightQuote that the optimizer can reason about
- * without depending on the FlightProvider interface. All four fields are
- * required — `legInfoOf` returns undefined when any is missing.
+ * Project a FlightQuote into core's `LegInfo` shape. Returns undefined when
+ * any required field is missing on the quote.
  */
-export type LegInfo = {
-  readonly priceMinor: number;
-  readonly currency: string;
-  readonly durationMinutes: number;
-  readonly departHour: number;
-  readonly arriveHour: number;
-};
-
 export const legInfoOf = (quote: FlightQuote): LegInfo | undefined => {
   if (
     quote.durationMinutes === undefined ||

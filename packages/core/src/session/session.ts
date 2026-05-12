@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AnchorDateSchema } from "../constraints/anchor.js";
 import { BlockedPeriodSchema } from "../constraints/blocked.js";
+import { FlightConstraintsSchema } from "../constraints/flight.js";
 import { SchengenWatchSchema } from "../constraints/schengen.js";
 import { LeaveBucketSchema } from "../leave/bucket.js";
 import { LeaveCycleSchema } from "../leave/cycle.js";
@@ -51,6 +52,7 @@ export const SessionSchema = z
     blocked: z.array(BlockedPeriodSchema),
     anchors: z.array(AnchorDateSchema),
     schengen: SchengenWatchSchema.optional(),
+    flightConstraints: FlightConstraintsSchema.optional(),
     extraHolidays: z.array(ExtraHolidaySchema),
     overriddenHolidays: z.array(OverriddenHolidaySchema),
     departureMode: DepartureModeSchema,
