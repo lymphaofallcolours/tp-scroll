@@ -24,4 +24,4 @@ Curated list of runtime and dev dependencies and why each one is here.
 
 ## Runtime requirement
 
-Node ≥22 is required for the native `Temporal` API. On Node 20 you can opt in to the polyfill by setting `TP_SCROLL_POLYFILL_TEMPORAL=1` before running the CLI; see the `core/calendar` README for details.
+Node ≥22 is required (ESM, workspace features). We import `Temporal` from `@js-temporal/polyfill`, so no V8 flags are needed. When Node ships `Temporal` unflagged we swap to the native global behind the single wrapper in `packages/core/src/calendar/temporal.ts`.

@@ -10,7 +10,7 @@ tp-scroll is a calendar-arithmetic application. Bugs in date handling translate 
 
 - All date types in `core/` are either `Temporal.PlainDate` (at boundaries) or `DayInt = number` (integer days since 2000-01-01 UTC, used everywhere inside `core`).
 - `Date`, `moment`, `date-fns`, and other legacy date types are forbidden in `core/`. The ESLint config flags `new Date(` inside `packages/core/`.
-- Target runtime is Node ≥22 with native `Temporal`. Node 20 contributors can opt in to the `@js-temporal/polyfill` via the `TP_SCROLL_POLYFILL_TEMPORAL=1` env var (documented in `docs/dependencies.md`).
+- For v0.1 we use the `@js-temporal/polyfill` as a runtime dependency of `packages/core`. Node 24 still ships `Temporal` only behind `--harmony-temporal`; the polyfill avoids forcing users to set V8 flags. When Node ships `Temporal` unflagged (planned for an upcoming LTS), we swap the import to the native global behind a thin wrapper and drop the polyfill — `core` calls only `Temporal.*` either way.
 
 ## Alternatives rejected
 
@@ -23,4 +23,4 @@ tp-scroll is a calendar-arithmetic application. Bugs in date handling translate 
 
 - All date arithmetic in `core/` is integer arithmetic on `DayInt`. Fast, deterministic, no timezone bugs.
 - Conversion to/from strings happens only at adapter boundaries.
-- Node 22 is a hard minimum.
+- Node ≥22 remains the minimum (for general ESM + workspace features), but no V8 flags are required.
