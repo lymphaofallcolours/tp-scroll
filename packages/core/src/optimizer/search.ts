@@ -31,11 +31,6 @@ const capCandidates = (candidates: Candidate[], cap: number): Candidate[] => {
 const leverage = (c: Candidate): number =>
   c.leaveCost === 0 ? Number.POSITIVE_INFINITY : c.awayDays / c.leaveCost;
 
-const tripSetKey = (plan: TripPlan): string =>
-  plan.trips
-    .map((t) => `${t.departure}-${t.return}`)
-    .sort()
-    .join("|");
 
 export const searchTopK = (candidates: Candidate[], options: SearchOptions): TripPlan[] => {
   const capped = capCandidates(candidates, options.maxCandidates ?? DEFAULT_MAX_CANDIDATES);
@@ -47,30 +42,16 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
     return j;
   });
 
-  // LP-relaxation (fractional knapsack) upper bound on additional awayDays
-  // achievable from candidates[i..] under budgetLeft. Walks candidates in
-  // leverage-descending order, accumulating awayDays; the boundary candidate
-  // contributes a fractional share. Always ≥ true integer optimum and tighter
-  // than the v0.2 sum-of-affordable form.
-  const leverageOrder = [...sorted.keys()].sort(
-    (a, b) => leverage(sorted[b]!) - leverage(sorted[a]!),
-  );
-
+  // Upper bound on additional awayDays achievable from candidates[i..] under
+  // budgetLeft. Sums the awayDays of every candidate in the [i..end] slice
+  // whose individual leaveCost fits — loose (over-counts when chosen candidates
+  // would overlap or compete for the same budget) but O(N - i) per call. The
+  // earlier v0.3 attempt at an LP-relaxation walk over a global leverage-sorted
+  // index was O(N) regardless of depth, which slowed deep search significantly.
   const remainingBoundFor = (i: number, budgetLeft: number): number => {
     let bound = 0;
-    let budgetUsed = 0;
-    for (const idx of leverageOrder) {
-      if (idx < i) continue;
-      const c = sorted[idx]!;
-      const remaining = budgetLeft - budgetUsed;
-      if (remaining <= 0) break;
-      if (c.leaveCost <= remaining) {
-        bound += c.awayDays;
-        budgetUsed += c.leaveCost;
-      } else if (c.leaveCost > 0) {
-        bound += (remaining / c.leaveCost) * c.awayDays;
-        break;
-      }
+    for (let k = i; k < sorted.length; k++) {
+      if (sorted[k]!.leaveCost <= budgetLeft) bound += sorted[k]!.awayDays;
     }
     return bound;
   };
@@ -80,7 +61,6 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
 
   const topK: TripPlan[] = [];
-  const seenTripSets = new Set<string>();
 
   const planFromPicked = (picked: ReadonlyArray<Candidate>): TripPlan => ({
     trips: picked.map((c) => c.trip),
@@ -91,22 +71,14 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   });
 
   const considerPlan = (plan: TripPlan): void => {
-    // Exact-duplicate trip-sets are skipped — they only differ by candidate id,
-    // which is internal noise.
-    const key = tripSetKey(plan);
-    if (seenTripSets.has(key)) return;
-
     const score = scorePlan(plan);
     if (topK.length < k) {
-      seenTripSets.add(key);
       topK.push(plan);
       topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
       return;
     }
     const worst = topK[topK.length - 1]!;
     if (compareScores(score, scorePlan(worst)) < 0) {
-      seenTripSets.delete(tripSetKey(worst));
-      seenTripSets.add(key);
       topK[topK.length - 1] = plan;
       topK.sort((a, b) => compareScores(scorePlan(a), scorePlan(b)));
     }
