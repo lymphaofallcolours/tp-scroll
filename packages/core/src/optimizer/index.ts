@@ -15,14 +15,19 @@ export type OptimizeOptions = {
   readonly range?: DayRange;
   readonly carryoverFromPrev?: number;
   readonly maxNodes?: number;
+  readonly planningBucketId?: string;
 };
 
 export const optimize = (session: Session, options: OptimizeOptions): TripPlan[] => {
   const range = options.range ?? { start: session.cycle.start, end: session.cycle.end };
 
-  const bucket = session.buckets[0];
-  if (bucket === undefined) {
+  const planningBucketId = options.planningBucketId ?? session.buckets[0]?.id;
+  if (planningBucketId === undefined) {
     throw new Error("Session must have at least one bucket");
+  }
+  const bucket = session.buckets.find((b) => b.id === planningBucketId);
+  if (bucket === undefined) {
+    throw new Error(`planningBucketId references unknown bucket: ${planningBucketId}`);
   }
 
   const consumedByActuals = session.trips
@@ -34,15 +39,21 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
       ? Math.min(options.carryoverFromPrev ?? 0, session.cycle.carryover.maxDays)
       : 0;
 
-  // Per the spec: total leave consumed across the plan ≤ (cycle.totalDays - bufferAtEnd),
-  // net of already-recorded actuals. The cycle is the authoritative cap; buckets are
-  // categorization within it.
+  // Budget is bucket-scoped: planning trips draw only from this bucket.
+  // bufferAtEnd is taken whole off the planning bucket (v0.2 simplification —
+  // proportional split deferred until the optimizer has multi-bucket assignment).
   const budget = Math.max(
     0,
-    session.cycle.totalDays + carryover - consumedByActuals - session.cycle.bufferAtEnd,
+    bucket.totalDays + carryover - consumedByActuals - session.cycle.bufferAtEnd,
   );
 
-  const candidates = generateCandidates(session, options.holidays, options.clock, range);
+  const candidates = generateCandidates(
+    session,
+    options.holidays,
+    options.clock,
+    range,
+    bucket.id,
+  );
 
   return searchTopK(candidates, {
     budget,

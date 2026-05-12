@@ -19,15 +19,13 @@ export type Candidate = {
   readonly anchorDelta: number;
 };
 
-const SYNTH_BUCKET_FALLBACK = "annual";
-
 export const generateCandidates = (
   session: Session,
   holidays: ReadonlySet<DayInt>,
   clock: Clock,
   searchRange: DayRange,
+  bucketId: string,
 ): Candidate[] => {
-  const bucketId = session.buckets[0]?.id ?? SYNTH_BUCKET_FALLBACK;
   const out: Candidate[] = [];
   const baseRange: DayRange = {
     start: Math.max(searchRange.start, session.cycle.start),

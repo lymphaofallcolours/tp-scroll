@@ -33,6 +33,8 @@ export {
   type Balance,
   type BalanceArgs,
   computeBalance,
+  type BucketBalance,
+  computeBucketBalances,
 } from "./leave/index.js";
 
 export {

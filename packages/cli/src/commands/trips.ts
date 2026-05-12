@@ -17,21 +17,33 @@ export const registerTripsCommands = (program: Command, deps: CliDeps): void => 
     .requiredOption("--to <date>", "Return date YYYY-MM-DD")
     .option("--planned", "Add as planned (default: actual)")
     .option("--note <note>", "Optional note")
-    .action(async (opts: { from: string; to: string; planned?: boolean; note?: string }) => {
-      const session = await requireActiveSession(deps);
-      const bucketId = session.buckets[0]!.id;
-      const trip: Trip = {
-        id: randomUUID().slice(0, 8),
-        departure: dayIntFromIso(opts.from),
-        return: dayIntFromIso(opts.to),
-        bucketId,
-        isActual: !opts.planned,
-        dayOverrides: [],
-        ...(opts.note !== undefined ? { notes: opts.note } : {}),
-      };
-      await saveAndTouch(deps, { ...session, trips: [...session.trips, trip] });
-      deps.stdout(`Added trip ${trip.id}: ${opts.from} → ${opts.to}`);
-    });
+    .option("--bucket <id>", "Bucket to charge (default: first bucket)")
+    .action(
+      async (opts: {
+        from: string;
+        to: string;
+        planned?: boolean;
+        note?: string;
+        bucket?: string;
+      }) => {
+        const session = await requireActiveSession(deps);
+        const bucketId = opts.bucket ?? session.buckets[0]!.id;
+        if (!session.buckets.some((b) => b.id === bucketId)) {
+          throw new Error(`unknown bucket: ${bucketId}`);
+        }
+        const trip: Trip = {
+          id: randomUUID().slice(0, 8),
+          departure: dayIntFromIso(opts.from),
+          return: dayIntFromIso(opts.to),
+          bucketId,
+          isActual: !opts.planned,
+          dayOverrides: [],
+          ...(opts.note !== undefined ? { notes: opts.note } : {}),
+        };
+        await saveAndTouch(deps, { ...session, trips: [...session.trips, trip] });
+        deps.stdout(`Added trip ${trip.id}: ${opts.from} → ${opts.to} (bucket ${bucketId})`);
+      },
+    );
 
   trips
     .command("list")

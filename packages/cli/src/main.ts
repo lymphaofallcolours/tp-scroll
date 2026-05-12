@@ -3,6 +3,7 @@ import { Command } from "commander";
 import type { CliDepsBase } from "./wiring.js";
 import { registerAnchorsCommands } from "./commands/anchors.js";
 import { registerBlockedCommands } from "./commands/blocked.js";
+import { registerBucketsCommands } from "./commands/buckets.js";
 import { registerCycleCommands } from "./commands/cycle.js";
 import { registerPlanCommand } from "./commands/plan.js";
 import { registerSessionCommands } from "./commands/session.js";
@@ -26,6 +27,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 
   registerSessionCommands(program, deps);
   registerCycleCommands(program, deps);
+  registerBucketsCommands(program, deps);
   registerTripsCommands(program, deps);
   registerBlockedCommands(program, deps);
   registerAnchorsCommands(program, deps);

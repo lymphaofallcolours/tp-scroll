@@ -58,6 +58,26 @@ export const SessionSchema = z
     {
       message: "half-day overrides require cycle.halfDaysAllowed=true",
     },
+  )
+  .refine(
+    (s) => new Set(s.buckets.map((b) => b.id)).size === s.buckets.length,
+    { message: "duplicate bucket ids" },
+  )
+  .refine(
+    (s) => s.buckets.reduce((sum, b) => sum + b.totalDays, 0) === s.cycle.totalDays,
+    { message: "bucket totals must sum to cycle.totalDays" },
+  )
+  .refine(
+    (s) => {
+      const ids = new Set(s.buckets.map((b) => b.id));
+      const missing = s.trips.find((t) => !ids.has(t.bucketId));
+      return missing === undefined;
+    },
+    (s) => {
+      const ids = new Set(s.buckets.map((b) => b.id));
+      const missing = s.trips.find((t) => !ids.has(t.bucketId));
+      return { message: `trip references unknown bucket: ${missing?.bucketId ?? ""}` };
+    },
   );
 
 export type Session = z.infer<typeof SessionSchema>;

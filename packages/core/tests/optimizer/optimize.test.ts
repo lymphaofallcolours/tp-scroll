@@ -55,9 +55,11 @@ describe("optimize", () => {
     expect(plans[0]!.awayDaysTotal).toBeGreaterThanOrEqual(plans[4]!.awayDaysTotal);
   });
 
-  it("never returns a plan whose total leave cost exceeds (totalDays - bufferAtEnd)", () => {
+  it("never returns a plan whose total leave cost exceeds (bucketTotal - bufferAtEnd)", () => {
+    const base = yearSession();
     const session = yearSession({
-      cycle: { ...yearSession().cycle, totalDays: 10, bufferAtEnd: 2 },
+      cycle: { ...base.cycle, totalDays: 10, bufferAtEnd: 2 },
+      buckets: [{ ...base.buckets[0]!, totalDays: 10 }],
     });
     const plans = optimize(session, { clock, holidays: new Set(), topK: 5 });
     for (const plan of plans) {

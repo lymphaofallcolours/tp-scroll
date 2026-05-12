@@ -1,6 +1,5 @@
 import {
-  computeBalance,
-  computeTripCost,
+  computeBucketBalances,
   evaluateSchengenWindow,
 } from "@tp-scroll/core";
 import type { Command } from "commander";
@@ -18,21 +17,17 @@ export const registerStatusCommand = (program: Command, deps: CliDeps): void => 
       const holidays = await deps.holidayProvider.forCountry(session.residenceCountry, cycleYear);
       const holidaySet = new Set(holidays.map((h) => h.day));
 
-      const consumed = session.trips
-        .filter((t) => t.isActual)
-        .reduce((s, t) => s + computeTripCost(t, session, holidaySet).leaveCost, 0);
-
-      const balance = computeBalance({
-        bucketTotal: session.cycle.totalDays,
-        consumed,
-        cycle: session.cycle,
-      });
+      const bucketBalances = computeBucketBalances(session, holidaySet);
 
       deps.stdout(`Session:   ${session.name} (${session.id})`);
       deps.stdout(`Cycle:     ${session.cycle.kind}, ${session.cycle.totalDays} days`);
-      deps.stdout(`Consumed:  ${balance.consumed}`);
-      deps.stdout(`Remaining: ${balance.remaining}`);
-      deps.stdout(`Available: ${balance.available} (after ${balance.buffer}d buffer)`);
+      deps.stdout(`Buckets:`);
+      for (const bb of bucketBalances) {
+        deps.stdout(
+          `  ${bb.bucketName.padEnd(12)} consumed ${bb.balance.consumed} / ${bb.balance.total}` +
+            ` (remaining ${bb.balance.remaining}, available ${bb.balance.available} after ${bb.balance.buffer}d buffer)`,
+        );
+      }
 
       if (session.schengen?.enabled) {
         const result = evaluateSchengenWindow({
