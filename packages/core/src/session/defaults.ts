@@ -47,6 +47,7 @@ export const defaultSession = (seed: SessionSeed): Session => {
     minTripDays: 2,
     maxTripDays: 21,
     travelDayConsumesLeaveByDefault: false,
+    cycleHistory: [],
     createdAt: now,
     updatedAt: now,
   };

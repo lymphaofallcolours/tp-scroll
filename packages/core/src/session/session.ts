@@ -27,6 +27,18 @@ export const OverriddenHolidaySchema = z.object({
 export const DepartureModeSchema = z.enum(["last-home-day", "first-away-day"]);
 export type DepartureMode = z.infer<typeof DepartureModeSchema>;
 
+export const HistoricalCycleSchema = z.object({
+  cycle: LeaveCycleSchema,
+  buckets: z.array(LeaveBucketSchema),
+  trips: z.array(TripSchema),
+  blocked: z.array(BlockedPeriodSchema),
+  anchors: z.array(AnchorDateSchema),
+  extraHolidays: z.array(ExtraHolidaySchema),
+  overriddenHolidays: z.array(OverriddenHolidaySchema),
+});
+
+export type HistoricalCycle = z.infer<typeof HistoricalCycleSchema>;
+
 export const SessionSchema = z
   .object({
     id: z.string().min(1),
@@ -45,6 +57,7 @@ export const SessionSchema = z
     minTripDays: z.number().int().positive(),
     maxTripDays: z.number().int().positive(),
     travelDayConsumesLeaveByDefault: z.boolean(),
+    cycleHistory: z.array(HistoricalCycleSchema).default([]),
     createdAt: z.string(),
     updatedAt: z.string(),
   })

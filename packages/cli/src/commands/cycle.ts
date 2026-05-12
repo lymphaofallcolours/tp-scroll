@@ -1,3 +1,4 @@
+import { dayIntFromIso, rollCycle, type LeaveBucket, type LeaveCycle } from "@tp-scroll/core";
 import type { Command } from "commander";
 
 import type { CliDeps } from "../main.js";
@@ -44,5 +45,36 @@ export const registerCycleCommands = (program: Command, deps: CliDeps): void => 
 
       await saveAndTouch(deps, { ...session, cycle, buckets });
       deps.stdout(`Cycle updated: ${cycle.kind}, total ${cycle.totalDays}, carryover ${cycle.carryover.mode}`);
+    });
+
+  cycle
+    .command("roll")
+    .description("Archive the current cycle and open a new one")
+    .requiredOption("--id <id>", "New cycle id (e.g. 2027)")
+    .requiredOption("--name <name>", "New cycle name")
+    .requiredOption("--from <date>", "New cycle start YYYY-MM-DD")
+    .requiredOption("--to <date>", "New cycle end YYYY-MM-DD")
+    .requiredOption("--total-days <n>", "New cycle total leave days")
+    .action(async (opts: { id: string; name: string; from: string; to: string; totalDays: string }) => {
+      const session = await requireActiveSession(deps);
+      const newCycle: LeaveCycle = {
+        ...session.cycle,
+        id: opts.id,
+        name: opts.name,
+        start: dayIntFromIso(opts.from),
+        end: dayIntFromIso(opts.to),
+        totalDays: Number(opts.totalDays),
+      };
+      const newBuckets: LeaveBucket[] = [
+        {
+          id: "annual",
+          name: "annual",
+          cycleId: opts.id,
+          totalDays: Number(opts.totalDays),
+        },
+      ];
+      const rolled = rollCycle(session, newCycle, newBuckets);
+      await saveAndTouch(deps, rolled);
+      deps.stdout(`Rolled to cycle ${opts.id} (${opts.name}). Previous cycle archived in history.`);
     });
 };

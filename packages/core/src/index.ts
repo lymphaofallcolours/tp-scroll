@@ -74,10 +74,14 @@ export {
   SessionSchema,
   type DepartureMode,
   DepartureModeSchema,
+  type HistoricalCycle,
+  HistoricalCycleSchema,
   ExtraHolidaySchema,
   OverriddenHolidaySchema,
   type SessionSeed,
   defaultSession,
+  rollCycle,
+  carryoverFromHistory,
 } from "./session/index.js";
 
 export {
