@@ -20,7 +20,13 @@ Branch-and-bound search over candidate trip windows:
 - **Mixed-integer programming** — same: high ceiling, high floor.
 - **Hand-rolled greedy** — too easy to miss good plans on tight constraints.
 
+## v0.1 implementation notes
+
+- **Take-only recursion.** The naive skip/take recursion blew the stack at ~7000 candidates. The shipping form recurses only on "take" (depth bounded by trip count, ≤ budget/minTripDays ≈ 12). At each node it iterates forward through the candidate list deciding which to take next, jumping past overlapping candidates via a precomputed `nextNonOverlap` array.
+- **Candidate cap.** Default 800 candidates; when generation exceeds this we keep the highest-leverage ones. Trades exhaustiveness for predictable wall-clock.
+- **Loose bound.** The pruning bound sums `awayDays` of remaining candidates that individually fit the budget, ignoring overlap. Sound (never prunes an optimal extension), not tight.
+
 ## Consequences
 
 - The optimizer is *not* provably optimal in v0.1. The property tests assert correctness (no constraint violation, consumed+remaining=totalDays, monotonicity), not optimality.
-- Future v0.3 may swap the search backend behind the same `optimize()` signature.
+- Future v0.3 may swap the search backend behind the same `optimize()` signature — the candidate cap and bound function are the natural points of leverage if branch-and-bound proves inadequate.

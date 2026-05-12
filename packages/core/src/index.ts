@@ -73,3 +73,16 @@ export {
   type SessionSeed,
   defaultSession,
 } from "./session/index.js";
+
+export {
+  type TripPlan,
+  type PlanScore,
+  scorePlan,
+  compareScores,
+  type Candidate,
+  generateCandidates,
+  type SearchOptions,
+  searchTopK,
+  type OptimizeOptions,
+  optimize,
+} from "./optimizer/index.js";
