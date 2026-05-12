@@ -1,0 +1,73 @@
+.nav {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--surface-edge);
+  background: var(--surface-page);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 360;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+  font-style: italic;
+  margin-right: var(--space-3);
+}
+
+.brandDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-trip);
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  transform: translateY(-2px);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-tertiary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-quiet);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.tab:hover {
+  color: var(--ink-primary);
+}
+
+.tabActive {
+  color: var(--ink-primary);
+  border-bottom-color: var(--accent-trip);
+}
+
+.demoFlag {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--accent-blocked);
+  background: var(--accent-blocked-soft);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-cell);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
