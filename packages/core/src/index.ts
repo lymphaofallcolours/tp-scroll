@@ -47,12 +47,20 @@ export {
 export {
   type BlockedPeriod,
   BlockedPeriodSchema,
+  tripOverlapsBlocked,
   type AnchorDate,
   AnchorDateSchema,
+  type IsAtHome,
+  anchorSatisfied,
+  anchorCoverageScore,
   type SchengenWatch,
   SchengenWatchSchema,
+  type SchengenInput,
+  type SchengenResult,
   SCHENGEN_ISO2,
   isSchengen,
+  evaluateSchengenWindow,
+  respectsBookingHorizon,
 } from "./constraints/index.js";
 
 export {

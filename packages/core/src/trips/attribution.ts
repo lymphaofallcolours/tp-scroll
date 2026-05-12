@@ -1,9 +1,9 @@
-import { type DayInt } from "../calendar/day-int.js";
+import type { DayInt } from "../calendar/day-int.js";
 import { isWeekend } from "../calendar/weekend.js";
 import { iterate } from "../calendar/range.js";
-import { type Session } from "../session/session.js";
+import type { Session } from "../session/session.js";
 
-import { type Trip } from "./trip.js";
+import type { Trip } from "./trip.js";
 
 export type ResolvedAttribution = {
   readonly day: DayInt;
