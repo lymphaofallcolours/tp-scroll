@@ -6,6 +6,7 @@ Project documentation, kept in sync with the codebase at every commit.
 
 - [`architecture.md`](architecture.md) — high-level system overview and layer boundaries
 - [`cli.md`](cli.md) — CLI command reference
+- [`testing.md`](testing.md) — test pyramid, optimizer invariants, conventions
 - [`dependencies.md`](dependencies.md) — runtime + dev dependencies and why each one is here
 - [`design/`](design/) — Architecture Decision Records (ADRs)
 
