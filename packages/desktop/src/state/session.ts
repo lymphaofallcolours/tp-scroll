@@ -228,6 +228,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   rollActiveCycle: async ({ name, start, end, totalDays }) => {
     const s = get().session;
     if (!s) return;
+    if (end < start) {
+      throw new Error("new end must be on or after new start");
+    }
+    // Hard cap: a cycle is a year-ish of leave. Allowing multi-year cycles
+    // makes the optimizer's O(days × maxTripDays) candidate set blow up
+    // (one user mis-typed 2025 instead of 2026, creating a 3-year cycle).
+    const cycleLen = end - start + 1;
+    if (cycleLen > 400) {
+      throw new Error(
+        `new cycle spans ${cycleLen} days — limit is 400. Check the start/end years.`,
+      );
+    }
     const newCycle: LeaveCycle = {
       ...s.cycle,
       id: `${s.id}-cycle-${start}`,
