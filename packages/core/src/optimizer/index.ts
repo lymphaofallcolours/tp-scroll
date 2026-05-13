@@ -121,6 +121,8 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
       anchors: session.anchors,
       topK,
       priceAware,
+      minGapDays: session.minGapDays,
+      maxGapDays: session.maxGapDays,
       ...(options.maxNodes !== undefined ? { maxNodes: options.maxNodes } : {}),
       ...(options.diversityThreshold !== undefined
         ? { diversityThreshold: options.diversityThreshold }
@@ -156,6 +158,8 @@ export const optimize = (session: Session, options: OptimizeOptions): TripPlan[]
       anchors: session.anchors,
       topK,
       priceAware,
+      minGapDays: session.minGapDays,
+      maxGapDays: session.maxGapDays,
       ...(options.maxNodes !== undefined ? { maxNodes: options.maxNodes } : {}),
     });
     perSegmentPlans.push(plans);

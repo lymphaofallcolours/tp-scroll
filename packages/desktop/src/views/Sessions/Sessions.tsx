@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   bucketKindColor,
   dayIntFromIso,
@@ -9,8 +9,19 @@ import {
   type Session,
 } from "@tp-scroll/core";
 
+import { bridge } from "../../api/bridge.js";
+import type { FlightCredentialsStatus } from "../../api/types.js";
+import { Hint } from "../../components/Hint.js";
 import { useSessionStore } from "../../state/session.js";
 import styles from "./Sessions.module.css";
+
+const KIND_HINTS: Record<BucketKind, string> = {
+  annual: "Your standard vacation allowance. The optimizer plans against this bucket by default.",
+  sick: "Sick days. Tracked after-the-fact; the optimizer never plans into this bucket.",
+  parental: "Parental leave. Longer absences, separately budgeted.",
+  conference: "Work travel — usually requires manual approval; separate budget so it doesn't eat vacation.",
+  other: "Anything else (jury duty, study leave, bereavement).",
+};
 
 const BUCKET_KINDS: ReadonlyArray<BucketKind> = [
   "annual",
@@ -30,6 +41,7 @@ export const Sessions = (): JSX.Element | null => {
   const rollActiveCycle = useSessionStore((s) => s.rollActiveCycle);
   const setFlightConstraints = useSessionStore((s) => s.setFlightConstraints);
   const addBucket = useSessionStore((s) => s.addBucket);
+  const setTripBounds = useSessionStore((s) => s.setTripBounds);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -200,6 +212,15 @@ export const Sessions = (): JSX.Element | null => {
               onAdd={async (input) => addBucket(input)}
             />
           )}
+
+          {session && (
+            <TripBoundsCard
+              session={session}
+              onSave={async (input) => setTripBounds(input)}
+            />
+          )}
+
+          <AmadeusCredentialsCard />
         </section>
 
         <section className={styles.column}>
@@ -248,6 +269,263 @@ export const Sessions = (): JSX.Element | null => {
   );
 };
 
+const AmadeusCredentialsCard = (): JSX.Element => {
+  const [status, setStatus] = useState<FlightCredentialsStatus | null>(null);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const s = await bridge.flights.credentials.status();
+        setStatus(s);
+      } catch {
+        // bridge unavailable (outside Electron) — leave status null
+      }
+    })();
+  }, []);
+
+  const onSave = async (): Promise<void> => {
+    setError(null);
+    setBusy(true);
+    try {
+      const next = await bridge.flights.credentials.set(clientId.trim(), clientSecret);
+      setStatus(next);
+      setClientId("");
+      setClientSecret("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onClear = async (): Promise<void> => {
+    setError(null);
+    setBusy(true);
+    try {
+      const next = await bridge.flights.credentials.clear();
+      setStatus(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sourceLabel = (() => {
+    if (status === null) return "(loading)";
+    if (status.offline === true) return "offline — provider disabled by TP_SCROLL_NETWORK=off";
+    if (status.source === "env") return `env vars (${status.clientIdMasked ?? "•••"})`;
+    if (status.source === "file") return `saved on disk (${status.clientIdMasked ?? "•••"})`;
+    return "none — using mock prices";
+  })();
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>
+        Flight provider credentials
+        <Hint text="Real flight prices come from Amadeus Self-Service — a free developer plan with ample monthly quota. Paste your test-environment client id and secret here. They're stored in ~/.tp-scroll/flights.json with 0600 permissions and never leave your machine except to call the Amadeus API." />
+      </h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Provider: <strong>{status?.providerName ?? "…"}</strong> · Source:{" "}
+        <strong>{sourceLabel}</strong>
+      </p>
+
+      {status?.source === "env" && (
+        <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+          Environment variables are set, so they take precedence. To use UI-saved credentials
+          instead, unset <code>TP_SCROLL_AMADEUS_CLIENT_ID</code> and restart.
+        </p>
+      )}
+
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>
+          Client ID
+          <Hint text="From dashboard.amadeus.com → My Self-Service Workspace → App → API Key" />
+        </span>
+        <input
+          type="text"
+          className={styles.input}
+          autoComplete="off"
+          spellCheck={false}
+          value={clientId}
+          placeholder="paste API key"
+          disabled={busy || status?.source === "env"}
+          onChange={(e) => setClientId(e.target.value)}
+        />
+      </div>
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>
+          Client Secret
+          <Hint text="From the same Amadeus app page. Stored on disk with 0600 permissions; never printed in logs." />
+        </span>
+        <input
+          type={showSecret ? "text" : "password"}
+          className={styles.input}
+          autoComplete="off"
+          spellCheck={false}
+          value={clientSecret}
+          placeholder="paste API secret"
+          disabled={busy || status?.source === "env"}
+          onChange={(e) => setClientSecret(e.target.value)}
+        />
+        <button
+          type="button"
+          className={styles.linkBtn}
+          style={{ alignSelf: "flex-start", marginTop: 4 }}
+          onClick={() => setShowSecret((v) => !v)}
+        >
+          {showSecret ? "hide" : "show"}
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: "var(--space-3)" }}>
+        <button
+          type="button"
+          className={styles.primaryBtn}
+          disabled={busy || status?.source === "env" || clientId.trim().length === 0 || clientSecret.length === 0}
+          onClick={() => void onSave()}
+        >
+          {busy ? "Saving…" : "Save"}
+        </button>
+        {status?.source === "file" && (
+          <button
+            type="button"
+            className={styles.linkBtn}
+            disabled={busy}
+            onClick={() => void onClear()}
+            style={{ alignSelf: "center" }}
+          >
+            clear stored credentials
+          </button>
+        )}
+      </div>
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
+  );
+};
+
+const TripBoundsCard = ({
+  session,
+  onSave,
+}: {
+  session: Session;
+  onSave: (input: {
+    minTripDays: number;
+    maxTripDays: number;
+    minGapDays: number;
+    maxGapDays: number;
+  }) => Promise<void>;
+}): JSX.Element => {
+  const [minLen, setMinLen] = useState(String(session.minTripDays));
+  const [maxLen, setMaxLen] = useState(String(session.maxTripDays));
+  const [minGap, setMinGap] = useState(String(session.minGapDays));
+  const [maxGap, setMaxGap] = useState(String(session.maxGapDays));
+  const [error, setError] = useState<string | null>(null);
+
+  const onApply = async (): Promise<void> => {
+    setError(null);
+    try {
+      await onSave({
+        minTripDays: Number(minLen),
+        maxTripDays: Number(maxLen),
+        minGapDays: Number(minGap),
+        maxGapDays: Number(maxGap),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>
+        Trip bounds
+        <Hint text="Shape what the optimizer considers a reasonable trip — both the length of each trip and the spacing between them." />
+      </h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Trips <strong>{session.minTripDays}–{session.maxTripDays}</strong> days,
+        spaced <strong>{session.minGapDays}–{session.maxGapDays}</strong> days apart.
+      </p>
+
+      <div className={styles.subhead}>
+        Length
+        <Hint text="The optimizer only considers candidate trips within this length range. Tighten to avoid one-day overnighters or three-week absences; widen to let the planner consider both." />
+      </div>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Min days
+            <Hint text="The optimizer skips candidate trips shorter than this." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={1}
+            value={minLen}
+            onChange={(e) => setMinLen(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Max days
+            <Hint text="The optimizer skips candidate trips longer than this." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={1}
+            value={maxLen}
+            onChange={(e) => setMaxLen(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className={styles.subhead}>
+        Gap between trips
+        <Hint text="Calendar days strictly between consecutive trips. A gap of 0 allows back-to-back; a gap of 5 means a full workweek at home between them. Applies only between trips — never to the cycle's start or end." />
+      </div>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Min gap
+            <Hint text="Minimum home-days between trips. Set to e.g. 14 to forbid back-to-back trips and give yourself recovery time." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            value={minGap}
+            onChange={(e) => setMinGap(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Max gap
+            <Hint text="Maximum home-days between trips. Set to e.g. 90 to forbid long stretches without a break. Use 365 (default) to disable." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            value={maxGap}
+            onChange={(e) => setMaxGap(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <button type="button" className={styles.primaryBtn} onClick={() => void onApply()}>
+        Apply
+      </button>
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
+  );
+};
+
 const BucketsCard = ({
   session,
   onAdd,
@@ -290,7 +568,10 @@ const BucketsCard = ({
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.columnTitle}>Buckets</h2>
+      <h2 className={styles.columnTitle}>
+        Buckets
+        <Hint text="A bucket is a separate allowance of leave days. Most people only need one (annual). Add more if your employer tracks sick days, parental leave, or conference travel separately." />
+      </h2>
       <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
         Each bucket has a kind so the optimizer can default to "annual" and the
         UI can colour-code your time off. Totals must add up to your cycle's
@@ -398,7 +679,10 @@ const BucketsCard = ({
               />
             </div>
             <div className={styles.field}>
-              <span className={styles.fieldLabel}>Kind</span>
+              <span className={styles.fieldLabel}>
+                Kind
+                <Hint text={KIND_HINTS[bKind]} />
+              </span>
               <select
                 className={styles.input}
                 value={bKind}
@@ -490,14 +774,20 @@ const FlightConstraintsCard = ({
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.columnTitle}>Flight constraints</h2>
+      <h2 className={styles.columnTitle}>
+        Flight constraints
+        <Hint text="Tells the price-aware planner which flights are acceptable. Set max duration to drop long-haul routes, depart-after to skip dawn flights, arrive-before to be home for dinner." />
+      </h2>
       <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
         Optional. Used by the price-aware planner to drop or down-rank candidates whose flights
         don't fit your travel preferences.
       </p>
       <div className={styles.fieldRow}>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Max duration (min)</span>
+          <span className={styles.fieldLabel}>
+            Max duration (min)
+            <Hint text="Maximum flight length in minutes for either leg of any trip. 240 = 4 hours. Leave blank for no limit." />
+          </span>
           <input
             type="number"
             className={styles.input}
@@ -508,7 +798,10 @@ const FlightConstraintsCard = ({
           />
         </div>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Combine</span>
+          <span className={styles.fieldLabel}>
+            Combine
+            <Hint text="AND requires every set constraint to pass. OR requires at least one — useful for 'I'd accept a late departure OR an early arrival'." />
+          </span>
           <select
             className={styles.input}
             value={combineMode}
@@ -521,7 +814,10 @@ const FlightConstraintsCard = ({
       </div>
       <div className={styles.fieldRow}>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Depart after (hour)</span>
+          <span className={styles.fieldLabel}>
+            Depart after (hour)
+            <Hint text="0-23, local time. Only flights departing at or after this hour pass. 18 = leave only on evening flights." />
+          </span>
           <input
             type="number"
             className={styles.input}
@@ -533,7 +829,10 @@ const FlightConstraintsCard = ({
           />
         </div>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Arrive before (hour)</span>
+          <span className={styles.fieldLabel}>
+            Arrive before (hour)
+            <Hint text="0-23, local time. Only flights arriving strictly before this hour pass. 10 = home before mid-morning." />
+          </span>
           <input
             type="number"
             className={styles.input}

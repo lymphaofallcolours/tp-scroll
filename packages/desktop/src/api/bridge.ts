@@ -39,6 +39,23 @@ const stubBridge: TpScrollApi = {
         origin: req.origin,
         destination: req.destination,
       }),
+    credentials: {
+      status: async () => ({
+        source: "none" as const,
+        clientIdMasked: null,
+        providerName: "mock",
+      }),
+      set: async () => ({
+        source: "none" as const,
+        clientIdMasked: null,
+        providerName: "mock",
+      }),
+      clear: async () => ({
+        source: "none" as const,
+        clientIdMasked: null,
+        providerName: "mock",
+      }),
+    },
   },
 };
 

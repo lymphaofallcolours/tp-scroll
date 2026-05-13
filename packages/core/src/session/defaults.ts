@@ -47,6 +47,8 @@ export const defaultSession = (seed: SessionSeed): Session => {
     departureMode: "last-home-day",
     minTripDays: 2,
     maxTripDays: 21,
+    minGapDays: 0,
+    maxGapDays: 365,
     travelDayConsumesLeaveByDefault: false,
     cycleHistory: [],
     createdAt: now,

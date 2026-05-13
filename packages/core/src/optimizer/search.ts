@@ -23,6 +23,18 @@ export type SearchOptions = {
    * ties on the existing 4 tiers). Requires candidates' `priceMinor` set.
    */
   readonly priceAware?: boolean;
+  /**
+   * Minimum calendar days strictly between consecutive picked trips
+   * (gap = next.departure - prev.return - 1). 0 = allow back-to-back.
+   * Only applies between consecutive trips, not to cycle boundaries.
+   */
+  readonly minGapDays?: number;
+  /**
+   * Maximum calendar days strictly between consecutive picked trips. The
+   * optimizer prunes branches that would force a longer gap than this.
+   * A large default (e.g. 365) effectively disables the constraint.
+   */
+  readonly maxGapDays?: number;
 };
 
 const DEFAULT_MAX_NODES = 200_000;
@@ -66,6 +78,8 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   const k = Math.max(1, options.topK);
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
   const priceAware = options.priceAware === true;
+  const minGap = Math.max(0, options.minGapDays ?? 0);
+  const maxGap = Math.max(minGap, options.maxGapDays ?? Number.POSITIVE_INFINITY);
 
   const topK: TripPlan[] = [];
 
@@ -102,7 +116,12 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
   let nodes = 0;
   const picked: Candidate[] = [];
 
-  const explore = (i: number, budgetLeft: number, awayDaysSoFar: number): void => {
+  const explore = (
+    i: number,
+    budgetLeft: number,
+    awayDaysSoFar: number,
+    prevReturn: number | undefined,
+  ): void => {
     if (++nodes > maxNodes) return;
     considerPlan(planFromPicked(picked));
 
@@ -115,13 +134,24 @@ export const searchTopK = (candidates: Candidate[], options: SearchOptions): Tri
       if (nodes > maxNodes) return;
       const c = sorted[j]!;
       if (c.leaveCost > budgetLeft) continue;
+      if (prevReturn !== undefined) {
+        const gap = c.trip.departure - prevReturn - 1;
+        if (gap < minGap) continue;
+        // sorted by departure → all subsequent j only increase gap, so break.
+        if (gap > maxGap) break;
+      }
       picked.push(c);
-      explore(nextNonOverlap[j]!, budgetLeft - c.leaveCost, awayDaysSoFar + c.awayDays);
+      explore(
+        nextNonOverlap[j]!,
+        budgetLeft - c.leaveCost,
+        awayDaysSoFar + c.awayDays,
+        c.trip.return,
+      );
       picked.pop();
     }
   };
 
-  explore(0, options.budget, 0);
+  explore(0, options.budget, 0, undefined);
 
   return topK;
 };

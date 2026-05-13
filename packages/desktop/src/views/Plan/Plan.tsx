@@ -13,6 +13,7 @@ import {
 import { legInfoOf, type AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
 
 import { bridge } from "../../api/bridge.js";
+import { Hint } from "../../components/Hint.js";
 import { useSessionStore } from "../../state/session.js";
 import styles from "./Plan.module.css";
 
@@ -142,7 +143,10 @@ export const Plan = (): JSX.Element | null => {
         </div>
         <div className={styles.controls}>
           <div className={styles.controlField}>
-            <span className={styles.controlLabel}>top</span>
+            <span className={styles.controlLabel}>
+              top
+              <Hint text="How many ranked plans to show. The optimizer always finds many candidates; this caps the display." />
+            </span>
             <input
               type="number"
               className={styles.controlInput}
@@ -159,19 +163,24 @@ export const Plan = (): JSX.Element | null => {
               onChange={(e) => setDiverse(e.target.checked)}
             />
             diverse
+            <Hint text="Splits the year into 5 segments and runs the search once per segment, then merges. Without it, the top plans tend to cluster around the same dates; with it, you'll see one plan starting roughly per quarter." />
           </label>
-          <label className={styles.checkboxControl} title={flightProviderName ?? ""}>
+          <label className={styles.checkboxControl}>
             <input
               type="checkbox"
               checked={fetchFlights}
               onChange={(e) => setFetchFlights(e.target.checked)}
             />
             flights {isMockFlights ? "(mock)" : ""}
+            <Hint
+              text={
+                isMockFlights
+                  ? "Showing mock prices. To enable real prices, register a free Amadeus Self-Service account and set TP_SCROLL_AMADEUS_CLIENT_ID + _CLIENT_SECRET before launching, or use the Settings card on the Sessions tab."
+                  : "Fetches the cheapest direct flight for each trip's outbound and return legs from Amadeus."
+              }
+            />
           </label>
-          <label
-            className={styles.checkboxControl}
-            title="Re-rank top-K plans by total flight price among ties (requires flights)."
-          >
+          <label className={styles.checkboxControl}>
             <input
               type="checkbox"
               checked={priceAware}
@@ -179,6 +188,7 @@ export const Plan = (): JSX.Element | null => {
               onChange={(e) => setPriceAware(e.target.checked)}
             />
             price-aware
+            <Hint text="Re-ranks the top plans so cheaper flight totals win among plans tied on home days / leverage / anchors / trip count. Also drops plans whose flights violate the flight constraints (configurable on the Sessions tab)." />
           </label>
           <button
             type="button"
@@ -202,6 +212,25 @@ export const Plan = (): JSX.Element | null => {
         <div className={styles.intro}>
           The optimizer keeps your weekends and holidays free of charge —<br />
           pick a count, decide if you want variety, and press Run.
+          <div
+            style={{
+              marginTop: "var(--space-5)",
+              fontStyle: "normal",
+              fontSize: "var(--type-small)",
+              fontFamily: "var(--font-mono)",
+              color: "var(--ink-tertiary)",
+              maxWidth: 540,
+              marginLeft: "auto",
+              marginRight: "auto",
+              textAlign: "left",
+              lineHeight: 1.6,
+            }}
+          >
+            <strong style={{ color: "var(--ink-secondary)" }}>Plans are ranked, in order:</strong>
+            <br />
+            1. most home-days · 2. best leverage (home days per leave day) ·{" "}
+            3. anchor-date coverage · 4. trip count {priceAware ? "· 5. lowest flight cost" : ""}
+          </div>
         </div>
       )}
 

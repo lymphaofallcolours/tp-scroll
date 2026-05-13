@@ -67,6 +67,20 @@ describe("SessionSchema", () => {
     expect(parsed.departureMode).toBe("first-away-day");
   });
 
+  it("defaults gap bounds to 0..365 and rejects min > max", () => {
+    const session = defaultSession({
+      id: "s1",
+      name: "2026",
+      residenceCountry: "DE",
+      homeCountry: "ES",
+    });
+    expect(session.minGapDays).toBe(0);
+    expect(session.maxGapDays).toBe(365);
+    expect(() =>
+      SessionSchema.parse({ ...session, minGapDays: 30, maxGapDays: 5 }),
+    ).toThrow();
+  });
+
   it("normalizes country codes to uppercase", () => {
     const session = defaultSession({
       id: "s1",

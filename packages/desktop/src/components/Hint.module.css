@@ -1,0 +1,68 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+  outline: none;
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface-edge);
+  color: var(--ink-secondary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: help;
+  transition: background var(--duration-fast) var(--ease-quiet), color var(--duration-fast) var(--ease-quiet);
+}
+
+.wrapper:hover .marker,
+.wrapper:focus .marker {
+  background: var(--ink-secondary);
+  color: var(--surface-page);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--ink-primary);
+  color: var(--surface-page);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 380;
+  line-height: 1.45;
+  border-radius: 3px;
+  box-shadow: 0 8px 16px -4px rgba(26, 36, 51, 0.4);
+  z-index: 100;
+  pointer-events: none;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  text-align: left;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--ink-primary);
+}

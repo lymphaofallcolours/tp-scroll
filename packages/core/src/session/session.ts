@@ -58,6 +58,8 @@ export const SessionSchema = z
     departureMode: DepartureModeSchema,
     minTripDays: z.number().int().positive(),
     maxTripDays: z.number().int().positive(),
+    minGapDays: z.number().int().nonnegative().default(0),
+    maxGapDays: z.number().int().nonnegative().default(365),
     travelDayConsumesLeaveByDefault: z.boolean(),
     cycleHistory: z.array(HistoricalCycleSchema).default([]),
     createdAt: z.string(),
@@ -65,6 +67,9 @@ export const SessionSchema = z
   })
   .refine((s) => s.minTripDays <= s.maxTripDays, {
     message: "minTripDays must be <= maxTripDays",
+  })
+  .refine((s) => s.minGapDays <= s.maxGapDays, {
+    message: "minGapDays must be <= maxGapDays",
   })
   .refine(
     (s) =>

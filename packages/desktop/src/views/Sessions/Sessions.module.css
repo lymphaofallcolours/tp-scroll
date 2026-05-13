@@ -222,3 +222,15 @@
   font-size: var(--type-mono-sm);
   margin-top: var(--space-2);
 }
+
+.subhead {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}

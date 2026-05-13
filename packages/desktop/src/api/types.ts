@@ -47,7 +47,19 @@ export type TpScrollApi = {
       origin: string;
       destination: string;
     }): Promise<AnnotatedTripPlan>;
+    readonly credentials: {
+      status(): Promise<FlightCredentialsStatus>;
+      set(clientId: string, clientSecret: string): Promise<FlightCredentialsStatus>;
+      clear(): Promise<FlightCredentialsStatus>;
+    };
   };
+};
+
+export type FlightCredentialsStatus = {
+  readonly source: "env" | "file" | "none";
+  readonly clientIdMasked: string | null;
+  readonly providerName: string;
+  readonly offline?: boolean;
 };
 
 declare global {

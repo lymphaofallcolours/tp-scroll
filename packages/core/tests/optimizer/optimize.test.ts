@@ -98,6 +98,30 @@ describe("optimize", () => {
     }
   });
 
+  it("respects minGapDays: consecutive trips are at least minGap apart", () => {
+    const session = yearSession({ minGapDays: 21 });
+    const plans = optimize(session, { clock, holidays: new Set(), topK: 5 });
+    for (const plan of plans) {
+      const sorted = [...plan.trips].sort((a, b) => a.departure - b.departure);
+      for (let i = 1; i < sorted.length; i++) {
+        const gap = sorted[i]!.departure - sorted[i - 1]!.return - 1;
+        expect(gap).toBeGreaterThanOrEqual(21);
+      }
+    }
+  });
+
+  it("respects maxGapDays: consecutive trips are at most maxGap apart", () => {
+    const session = yearSession({ minGapDays: 0, maxGapDays: 14 });
+    const plans = optimize(session, { clock, holidays: new Set(), topK: 5 });
+    for (const plan of plans) {
+      const sorted = [...plan.trips].sort((a, b) => a.departure - b.departure);
+      for (let i = 1; i < sorted.length; i++) {
+        const gap = sorted[i]!.departure - sorted[i - 1]!.return - 1;
+        expect(gap).toBeLessThanOrEqual(14);
+      }
+    }
+  });
+
   it("returned plans are sorted by descending score", () => {
     const session = yearSession();
     const plans = optimize(session, { clock, holidays: new Set(), topK: 5 });

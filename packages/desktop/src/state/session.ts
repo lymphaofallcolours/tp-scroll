@@ -51,6 +51,12 @@ type SessionState = {
     totalDays: number;
     kind: BucketKind;
   }) => Promise<void>;
+  readonly setTripBounds: (input: {
+    minTripDays: number;
+    maxTripDays: number;
+    minGapDays: number;
+    maxGapDays: number;
+  }) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -281,4 +287,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     await persist(next, get().isDemo);
   },
 
+  setTripBounds: async ({ minTripDays, maxTripDays, minGapDays, maxGapDays }) => {
+    const s = get().session;
+    if (!s) return;
+    const ok =
+      Number.isFinite(minTripDays) &&
+      Number.isFinite(maxTripDays) &&
+      Number.isFinite(minGapDays) &&
+      Number.isFinite(maxGapDays) &&
+      minTripDays >= 1 &&
+      maxTripDays >= minTripDays &&
+      minGapDays >= 0 &&
+      maxGapDays >= minGapDays;
+    if (!ok) {
+      throw new Error(
+        `invalid bounds: trip ${minTripDays}-${maxTripDays}, gap ${minGapDays}-${maxGapDays}`,
+      );
+    }
+    const next = touch({ ...s, minTripDays, maxTripDays, minGapDays, maxGapDays });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
 }));
