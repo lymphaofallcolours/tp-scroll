@@ -20,6 +20,8 @@ import {
   buildBucketSlices,
   buildBurndown,
   buildLeverageStats,
+  buildMonthlyDistribution,
+  buildSchengenSnapshot,
   buildTripLengthHistogram,
 } from "./insights-data.js";
 import styles from "./Insights.module.css";
@@ -70,6 +72,17 @@ const tooltipStyle = {
 export const Insights = (): JSX.Element | null => {
   const session = useSessionStore((s) => s.session);
   const holidays = useSessionStore((s) => s.holidays);
+  // "today" for Schengen tracking. Falls back to today's date if the cycle is
+  // future-dated (so the counter never reports phantom days outside).
+  const todayDayInt = useMemo(() => {
+    if (!session) return 0;
+    const now = new Date();
+    const iso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+    const epoch = new Date(Date.UTC(2000, 0, 1));
+    const millis = new Date(iso + "T00:00:00Z").getTime() - epoch.getTime();
+    const today = Math.floor(millis / 86_400_000);
+    return Math.min(Math.max(today, session.cycle.start), session.cycle.end);
+  }, [session]);
 
   const burndown = useMemo(
     () => (session ? buildBurndown(session, holidays) : null),
@@ -93,6 +106,14 @@ export const Insights = (): JSX.Element | null => {
         ? buildLeverageStats(session, holidays)
         : { leaveDays: 0, awayDays: 0, freeDays: 0, leveragePct: 0 },
     [session, holidays],
+  );
+  const monthly = useMemo(
+    () => (session ? buildMonthlyDistribution(session, holidays) : []),
+    [session, holidays],
+  );
+  const schengen = useMemo(
+    () => (session ? buildSchengenSnapshot(session, todayDayInt) : null),
+    [session, todayDayInt],
   );
 
   if (!session || !burndown) return null;
@@ -132,6 +153,16 @@ export const Insights = (): JSX.Element | null => {
       </div>
 
       <TripLengthPanel histogram={histogram} />
+
+      <MonthlyDistributionPanel monthly={monthly} />
+
+      {schengen && (
+        <SchengenPanel
+          snapshot={schengen}
+          residenceCountry={session.residenceCountry}
+          homeCountry={session.homeCountry}
+        />
+      )}
 
       <AnchorListPanel anchors={anchors} />
 
@@ -460,6 +491,149 @@ const TripLengthPanel = ({
     >
       <div className={styles.histogramFrame}>
         <Bar data={data} options={options} />
+      </div>
+    </Panel>
+  );
+};
+
+const MonthlyDistributionPanel = ({
+  monthly,
+}: {
+  monthly: ReadonlyArray<ReturnType<typeof buildMonthlyDistribution>[number]>;
+}): JSX.Element => {
+  const labels = monthly.map((m) => m.label);
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: "trip days",
+        data: monthly.map((m) => m.away),
+        backgroundColor: TOKENS.sage,
+        stack: "days",
+      },
+      {
+        label: "blocked",
+        data: monthly.map((m) => m.blocked),
+        backgroundColor: TOKENS.brick,
+        stack: "days",
+      },
+      {
+        label: "holidays",
+        data: monthly.map((m) => m.holiday),
+        backgroundColor: TOKENS.amber,
+        stack: "days",
+      },
+      {
+        label: "weekends",
+        data: monthly.map((m) => m.weekend),
+        backgroundColor: TOKENS.inkFaint,
+        stack: "days",
+      },
+      {
+        label: "home (residence)",
+        data: monthly.map((m) => m.home),
+        backgroundColor: TOKENS.sunk,
+        stack: "days",
+      },
+    ],
+  };
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index" as const, intersect: false },
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+        labels: {
+          color: TOKENS.inkTertiary,
+          font: { family: FONT_MONO, size: 11 },
+          boxWidth: 10,
+          padding: 14,
+        },
+      },
+      tooltip: tooltipStyle,
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        border: { color: TOKENS.edge },
+        ticks: { color: TOKENS.inkTertiary, font: { family: FONT_MONO, size: 11 } },
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: {
+          color: TOKENS.inkTertiary,
+          font: { family: FONT_MONO, size: 10 },
+          stepSize: 5,
+        },
+        grid: { color: `${TOKENS.edge}66`, drawTicks: false },
+        border: { display: false },
+      },
+    },
+  };
+  return (
+    <Panel
+      title="Monthly distribution"
+      subtitle="how each month of the cycle is spent — every day in exactly one bucket"
+    >
+      <div className={styles.histogramFrame} style={{ height: 280 }}>
+        <Bar data={data} options={options} />
+      </div>
+    </Panel>
+  );
+};
+
+const SchengenPanel = ({
+  snapshot,
+  residenceCountry,
+  homeCountry,
+}: {
+  snapshot: ReturnType<typeof buildSchengenSnapshot>;
+  residenceCountry: string;
+  homeCountry: string;
+}): JSX.Element => {
+  if (!snapshot.applicable) {
+    return (
+      <Panel
+        title="Schengen window"
+        subtitle="not applicable — both residence and home are inside the Schengen Area"
+      >
+        <div className={styles.emptyState}>
+          The 90/180 rolling-window rule restricts non-EU nationals visiting Schengen. With
+          residence={residenceCountry} and home={homeCountry}, both are inside Schengen, so the
+          rule doesn't apply here.
+        </div>
+      </Panel>
+    );
+  }
+  const pct = Math.round((snapshot.daysUsed / snapshot.maxDays) * 100);
+  const overLimit = snapshot.daysUsed > snapshot.maxDays;
+  return (
+    <Panel
+      title="Schengen window"
+      subtitle={`rolling ${snapshot.windowDays}-day counter for days outside the Schengen area`}
+    >
+      <div className={styles.schengenFrame}>
+        <div className={styles.schengenStat}>
+          <span className={styles.schengenValue}>
+            {snapshot.daysUsed}
+            <span className={styles.schengenSlash}>/{snapshot.maxDays}</span>
+          </span>
+          <span className={styles.schengenLabel}>days used (rolling 180)</span>
+        </div>
+        <div className={styles.schengenBar}>
+          <div
+            className={`${styles.schengenFill} ${overLimit ? styles.schengenFillOver : ""}`}
+            style={{ width: `${Math.min(100, pct)}%` }}
+          />
+        </div>
+        <div className={styles.schengenNote}>
+          {overLimit
+            ? "Window exceeds the 90-day limit — check your travel record."
+            : `${snapshot.maxDays - snapshot.daysUsed} days remaining before the 90-day cap.`}
+        </div>
       </div>
     </Panel>
   );

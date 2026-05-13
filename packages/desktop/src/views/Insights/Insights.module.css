@@ -257,6 +257,67 @@
   position: relative;
 }
 
+/* Schengen */
+.schengenFrame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.schengenStat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.schengenValue {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 40px;
+  font-weight: 380;
+  color: var(--ink-primary);
+  font-feature-settings: "tnum" 1;
+}
+
+.schengenSlash {
+  color: var(--ink-tertiary);
+  font-size: 24px;
+  margin-left: 4px;
+}
+
+.schengenLabel {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-tertiary);
+}
+
+.schengenBar {
+  height: 14px;
+  background: var(--surface-sunk);
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+}
+
+.schengenFill {
+  height: 100%;
+  background: var(--accent-bucket-annual);
+  transition: width var(--duration-quiet) var(--ease-quiet);
+}
+
+.schengenFillOver {
+  background: var(--accent-blocked);
+}
+
+.schengenNote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-tertiary);
+}
+
 /* Anchor list */
 .anchorList {
   list-style: none;

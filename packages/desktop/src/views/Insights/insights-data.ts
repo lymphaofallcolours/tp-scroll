@@ -2,8 +2,11 @@ import {
   bucketKindColor,
   computeBucketBalances,
   computeTripCost,
+  currentSchengenLoad,
   fromDayInt,
   isoFromDayInt,
+  isSchengen,
+  isWeekend,
   resolveAttribution,
   type BucketKind,
   type DayInt,
@@ -216,4 +219,107 @@ export const buildLeverageStats = (
   const freeDays = Math.max(0, awayDays - leaveDays);
   const leveragePct = awayDays === 0 ? 0 : Math.round((freeDays / awayDays) * 100);
   return { leaveDays, awayDays, freeDays, leveragePct };
+};
+
+export type MonthlyBucket = {
+  readonly label: string; // "Jan", "Feb", ...
+  readonly month: number; // 1-12
+  readonly home: number;
+  readonly away: number;
+  readonly weekend: number;
+  readonly holiday: number;
+  readonly blocked: number;
+};
+
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Per-month breakdown of every day in the cycle. Each day belongs to exactly
+ * one bucket so the stacked-bar columns always sum to the days-in-month
+ * (or the slice of the month inside the cycle if it straddles).
+ *
+ * Precedence: trip → blocked → holiday → weekend → home (residence).
+ */
+export const buildMonthlyDistribution = (
+  session: Session,
+  holidays: ReadonlyArray<Holiday>,
+): ReadonlyArray<MonthlyBucket> => {
+  const holidayByDay = new Map(holidays.map((h) => [h.day, h.name]));
+  const tripByDay = new Map<DayInt, "actual" | "planned">();
+  for (const t of session.trips) {
+    for (let d = t.departure; d <= t.return; d++) {
+      tripByDay.set(d, t.isActual ? "actual" : "planned");
+    }
+  }
+  const blockedByDay = new Set<DayInt>();
+  for (const b of session.blocked) {
+    for (let d = b.start; d <= b.end; d++) blockedByDay.add(d);
+  }
+
+  const startYear = fromDayInt(session.cycle.start).year;
+  type Mutable = { -readonly [K in keyof MonthlyBucket]: MonthlyBucket[K] };
+  const buckets: Mutable[] = MONTH_LABELS.map((label, i) => ({
+    label,
+    month: i + 1,
+    home: 0,
+    away: 0,
+    weekend: 0,
+    holiday: 0,
+    blocked: 0,
+  }));
+
+  for (let d = session.cycle.start; d <= session.cycle.end; d++) {
+    const date = fromDayInt(d);
+    if (date.year !== startYear) continue;
+    const m = date.month - 1;
+    const bucket = buckets[m]!;
+    if (tripByDay.has(d)) bucket.away += 1;
+    else if (blockedByDay.has(d)) bucket.blocked += 1;
+    else if (holidayByDay.has(d)) bucket.holiday += 1;
+    else if (isWeekend(d, session.residenceCountry)) bucket.weekend += 1;
+    else bucket.home += 1;
+  }
+
+  return buckets;
+};
+
+export type SchengenSnapshot = {
+  readonly applicable: boolean;
+  readonly residenceOutside: boolean;
+  readonly homeOutside: boolean;
+  readonly windowDays: number;
+  readonly maxDays: number;
+  readonly daysUsed: number;
+  readonly today: DayInt;
+};
+
+/**
+ * Snapshot of the Schengen 90/180 counter at "today". Only meaningful when
+ * the user has at least one foot outside Schengen; if both residence and
+ * home are Schengen-area, the panel switches to a "not applicable" state
+ * rather than reporting 0/90.
+ */
+export const buildSchengenSnapshot = (
+  session: Session,
+  today: DayInt,
+): SchengenSnapshot => {
+  const residenceOutside = !isSchengen(session.residenceCountry);
+  const homeOutside = !isSchengen(session.homeCountry);
+  const applicable = residenceOutside || homeOutside;
+  const windowDays = 180;
+  const maxDays = 90;
+  const daysUsed = applicable
+    ? currentSchengenLoad({
+        trips: session.trips,
+        residenceCountry: session.residenceCountry,
+        homeCountry: session.homeCountry,
+        today,
+        windowDays,
+        session,
+      })
+    : 0;
+  return { applicable, residenceOutside, homeOutside, windowDays, maxDays, daysUsed, today };
 };
