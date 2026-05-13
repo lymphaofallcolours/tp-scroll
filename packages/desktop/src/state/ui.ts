@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Trip } from "@tp-scroll/core";
 
-export type View = "calendar" | "trips" | "plan" | "burndown" | "sessions";
+export type View = "calendar" | "trips" | "plan" | "insights" | "sessions";
 
 /**
  * Pre-fill payload used to hand off a planned trip from the Plan view to the

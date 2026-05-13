@@ -4,7 +4,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { Nav } from "./components/Nav.js";
 import { useSessionStore } from "./state/session.js";
 import { useUiStore } from "./state/ui.js";
-import { Burndown } from "./views/Burndown/Burndown.js";
+import { Insights } from "./views/Insights/Insights.js";
 import { Calendar } from "./views/Calendar/Calendar.js";
 import { Plan } from "./views/Plan/Plan.js";
 import { Sessions } from "./views/Sessions/Sessions.js";
@@ -50,7 +50,7 @@ export const App = (): JSX.Element => {
         )}
         {view === "trips" && <Trips />}
         {view === "plan" && <Plan />}
-        {view === "burndown" && <Burndown />}
+        {view === "insights" && <Insights />}
         {view === "sessions" && <Sessions />}
       </ErrorBoundary>
     </>

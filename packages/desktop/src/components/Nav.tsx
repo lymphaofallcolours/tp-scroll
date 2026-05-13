@@ -7,7 +7,7 @@ const TABS: ReadonlyArray<{ view: View; label: string }> = [
   { view: "calendar", label: "Calendar" },
   { view: "trips", label: "Trips" },
   { view: "plan", label: "Plan" },
-  { view: "burndown", label: "Burndown" },
+  { view: "insights", label: "Insights" },
   { view: "sessions", label: "Sessions" },
 ];
 

@@ -12,8 +12,8 @@ import {
 import { Line } from "react-chartjs-2";
 
 import { useSessionStore } from "../../state/session.js";
-import { buildBurndown } from "./burndown-data.js";
-import styles from "./Burndown.module.css";
+import { buildBurndown } from "./insights-data.js";
+import styles from "./Insights.module.css";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -33,7 +33,7 @@ const TOKENS = {
 
 const FONT_MONO = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
 
-export const Burndown = (): JSX.Element | null => {
+export const Insights = (): JSX.Element | null => {
   const session = useSessionStore((s) => s.session);
   const holidays = useSessionStore((s) => s.holidays);
 
@@ -152,8 +152,8 @@ export const Burndown = (): JSX.Element | null => {
     <main className={styles.page}>
       <header className={styles.header}>
         <div>
-          <span className={styles.kicker}>tp-scroll · burndown</span>
-          <h1 className={styles.title}>How much of the year is already spent.</h1>
+          <span className={styles.kicker}>tp-scroll · insights</span>
+          <h1 className={styles.title}>The year, examined from several angles.</h1>
         </div>
         <div className={styles.statRow}>
           <div>
