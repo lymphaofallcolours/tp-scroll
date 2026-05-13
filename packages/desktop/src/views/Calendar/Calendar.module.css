@@ -122,6 +122,21 @@
   border: 1px dashed var(--accent-trip);
   box-sizing: border-box;
 }
+.swatchAnchor {
+  background: var(--surface-sunk);
+  position: relative;
+}
+.swatchAnchor::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-primary);
+  border: 1px solid var(--surface-card);
+}
 
 .summary {
   display: grid;

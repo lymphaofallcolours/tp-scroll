@@ -28,6 +28,8 @@ export type DayCell = {
   readonly homeHoliday?: boolean;
   /** The holiday name, when known. */
   readonly holidayName?: string;
+  /** True if the user has marked this day as an anchor (prefer to be home). */
+  readonly isAnchor?: boolean;
   readonly label?: string;
 };
 
@@ -52,6 +54,7 @@ export const buildYearView = (
 
   const holidayByDay = new Map(holidays.map((h) => [h.day, h.name] as const));
   const homeHolidayByDay = new Map(homeHolidays.map((h) => [h.day, h.name] as const));
+  const anchorDays = new Set(session.anchors.map((a) => a.day));
   const trips = session.trips;
   const blocked = session.blocked;
 
@@ -124,6 +127,7 @@ export const buildYearView = (
         return epoch.until(date, { largestUnit: "days" }).days;
       })();
       const classification = classify(dayInt, date);
+      const isAnchor = anchorDays.has(dayInt);
       cells[leading + d - 1] = {
         day: dayInt,
         date,
@@ -131,6 +135,7 @@ export const buildYearView = (
         ...(classification.bucketKind !== undefined ? { bucketKind: classification.bucketKind } : {}),
         ...(classification.homeHoliday === true ? { homeHoliday: true } : {}),
         ...(classification.holidayName !== undefined ? { holidayName: classification.holidayName } : {}),
+        ...(isAnchor ? { isAnchor: true } : {}),
       };
     }
 

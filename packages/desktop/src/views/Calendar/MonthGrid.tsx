@@ -73,16 +73,18 @@ export const MonthGrid = ({ view, onCellClick }: Props): JSX.Element => {
             }
             const cls = cellClassFor[cell.kind];
             const homeCls = cell.homeHoliday === true ? ` ${styles.cellHomeHoliday}` : "";
+            const anchorCls = cell.isAnchor === true ? ` ${styles.cellAnchor}` : "";
             const style = tripStyleFor(cell);
             const titleParts = [cell.date.toString(), cell.kind];
             if (cell.bucketKind) titleParts.push(cell.bucketKind);
             if (cell.holidayName) titleParts.push(`“${cell.holidayName}”`);
+            if (cell.isAnchor) titleParts.push("★ anchor");
             const title = titleParts.join(" — ");
             return (
               <button
                 key={`c-${wIdx}-${dIdx}`}
                 type="button"
-                className={`${styles.cell} ${styles.cellInteractive} ${cls}${homeCls}`}
+                className={`${styles.cell} ${styles.cellInteractive} ${cls}${homeCls}${anchorCls}`}
                 {...(style !== undefined ? { style } : {})}
                 title={title}
                 onClick={(e) => {

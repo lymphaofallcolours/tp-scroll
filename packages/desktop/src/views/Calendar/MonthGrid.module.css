@@ -88,6 +88,26 @@
   outline: 2px solid var(--accent-trip);
 }
 
+/* Anchor marker: a small filled circle in the bottom-left corner. Composes
+   with any kind, including the home-holiday triangle (opposite corner) so
+   a day can be both. The day-number sits bottom-right so this corner is
+   visually empty otherwise. */
+.cellAnchor {
+  position: relative;
+}
+
+.cellAnchor::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-primary);
+  border: 1px solid var(--surface-card);
+}
+
 .cellBlank {
   background: transparent;
   pointer-events: none;

@@ -67,7 +67,8 @@ export const DayPopover = ({ cell, anchorRect, session, onClose }: Props): JSX.E
     day: "numeric",
   });
 
-  const isAnchor = session.anchors.some((a) => a.day === cell.day);
+  const anchorAtDay = session.anchors.find((a) => a.day === cell.day);
+  const isAnchor = anchorAtDay !== undefined;
   const blockedAtDay = session.blocked.find(
     (b) => cell.day >= b.start && cell.day <= b.end,
   );
@@ -153,6 +154,15 @@ export const DayPopover = ({ cell, anchorRect, session, onClose }: Props): JSX.E
               <em>{tripAtDay.notes ?? tripAtDay.id}</em>
               {" · "}
               {isoFromDayInt(tripAtDay.departure)} → {isoFromDayInt(tripAtDay.return)}
+            </div>
+          )}
+          {anchorAtDay && (
+            <div className={styles.anchorNote}>
+              ● anchor: prefer in <em>{anchorAtDay.preferIn}</em> · weight{" "}
+              <strong>{anchorAtDay.weight}</strong>
+              <div className={styles.anchorExplain}>
+                The optimizer gets +{anchorAtDay.weight} when a plan keeps you in {anchorAtDay.preferIn} on this day.
+              </div>
             </div>
           )}
         </div>

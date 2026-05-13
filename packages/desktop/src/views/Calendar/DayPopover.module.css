@@ -69,6 +69,22 @@
   margin-top: 6px;
 }
 
+.anchorNote {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--ink-primary);
+  margin-top: 6px;
+}
+
+.anchorExplain {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+  line-height: 1.45;
+}
+
 .actions {
   display: flex;
   flex-direction: column;

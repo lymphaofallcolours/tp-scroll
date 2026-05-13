@@ -83,6 +83,11 @@ export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.E
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchBlocked}`} /> blocked</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchActual}`} /> trip · actual</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchPlanned}`} /> trip · planned</span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.swatch} ${styles.swatchAnchor}`} />
+          anchor day
+          <span className={styles.legendCount}>({session.anchors.length})</span>
+        </span>
       </div>
 
       <section className={styles.summary} aria-label="Cycle summary">
