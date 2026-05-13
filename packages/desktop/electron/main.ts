@@ -23,6 +23,11 @@ const createWindow = async (): Promise<void> => {
   });
 
   if (isDev) {
+    win.webContents.openDevTools({ mode: "detach" });
+    win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+      const levelName = ["DEBUG", "LOG", "WARN", "ERROR"][level] ?? `LEVEL${level}`;
+      console.log(`[renderer ${levelName}] ${message} (${sourceId}:${line})`);
+    });
     await win.loadURL("http://localhost:5173");
   } else {
     await win.loadFile(join(__dirname, "../renderer/index.html"));

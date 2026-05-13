@@ -332,7 +332,7 @@ const HomePeriodsCard = ({
     }
   };
 
-  const sorted = [...session.blocked].sort((a, b) => a.start - b.start);
+  const sorted = [...(session.blocked ?? [])].sort((a, b) => a.start - b.start);
 
   return (
     <div className={styles.card}>
@@ -473,7 +473,7 @@ const RegionOverridesCard = ({
     }
   };
 
-  const sorted = [...session.regions].sort((a, b) => a.start - b.start);
+  const sorted = [...(session.regions ?? [])].sort((a, b) => a.start - b.start);
 
   return (
     <div className={styles.card}>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { Nav } from "./components/Nav.js";
 import { useSessionStore } from "./state/session.js";
 import { useUiStore } from "./state/ui.js";
@@ -43,13 +44,15 @@ export const App = (): JSX.Element => {
   return (
     <>
       <Nav />
-      {view === "calendar" && (
-        <Calendar session={session} holidays={holidays} homeHolidays={homeHolidays} />
-      )}
-      {view === "trips" && <Trips />}
-      {view === "plan" && <Plan />}
-      {view === "burndown" && <Burndown />}
-      {view === "sessions" && <Sessions />}
+      <ErrorBoundary>
+        {view === "calendar" && (
+          <Calendar session={session} holidays={holidays} homeHolidays={homeHolidays} />
+        )}
+        {view === "trips" && <Trips />}
+        {view === "plan" && <Plan />}
+        {view === "burndown" && <Burndown />}
+        {view === "sessions" && <Sessions />}
+      </ErrorBoundary>
     </>
   );
 };
