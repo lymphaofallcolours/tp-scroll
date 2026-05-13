@@ -86,6 +86,7 @@ export const Trips = (): JSX.Element | null => {
               session={session}
               initial={editingTrip}
               isDemo={isDemo}
+              holidays={holidays}
               onSubmit={async (trip) => {
                 if (editingTrip) {
                   await updateTrip(trip);

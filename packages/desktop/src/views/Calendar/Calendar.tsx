@@ -14,15 +14,23 @@ import styles from "./Calendar.module.css";
 type Props = {
   readonly session: Session;
   readonly holidays: ReadonlyArray<Holiday>;
+  readonly homeHolidays?: ReadonlyArray<Holiday>;
 };
 
-export const Calendar = ({ session, holidays }: Props): JSX.Element => {
-  const months = useMemo(() => buildYearView(session, holidays), [session, holidays]);
+export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.Element => {
+  const months = useMemo(
+    () => buildYearView(session, holidays, homeHolidays),
+    [session, holidays, homeHolidays],
+  );
   const balances = useMemo(
     () => computeBucketBalances(session, new Set(holidays.map((h) => h.day))),
     [session, holidays],
   );
-  const annual = balances.find((b) => b.bucketId === session.buckets[0]?.id) ?? balances[0];
+  // The "annual" balance is the planning bucket — prefer kind="annual" (v2.5),
+  // fall back to the first bucket if no annual exists.
+  const annual =
+    balances.find((b) => session.buckets.find((sb) => sb.id === b.bucketId)?.kind === "annual") ??
+    balances[0];
 
   const tripDays = useMemo(() => {
     const holidaySet = new Set(holidays.map((h) => h.day));
@@ -58,7 +66,8 @@ export const Calendar = ({ session, holidays }: Props): JSX.Element => {
       <div className={styles.legend} role="region" aria-label="Legend">
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchResidence}`} /> residence weekday</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchWeekend}`} /> weekend</span>
-        <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchHoliday}`} /> public holiday</span>
+        <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchHoliday}`} /> {session.residenceCountry} public holiday</span>
+        <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchHomeHoliday}`} /> {session.homeCountry} public holiday</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchBlocked}`} /> blocked</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchActual}`} /> trip · actual</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchPlanned}`} /> trip · planned</span>

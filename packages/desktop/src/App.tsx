@@ -13,6 +13,7 @@ export const App = (): JSX.Element => {
   const status = useSessionStore((s) => s.status);
   const session = useSessionStore((s) => s.session);
   const holidays = useSessionStore((s) => s.holidays);
+  const homeHolidays = useSessionStore((s) => s.homeHolidays);
   const errorMessage = useSessionStore((s) => s.errorMessage);
   const init = useSessionStore((s) => s.init);
   const view = useUiStore((s) => s.view);
@@ -42,7 +43,9 @@ export const App = (): JSX.Element => {
   return (
     <>
       <Nav />
-      {view === "calendar" && <Calendar session={session} holidays={holidays} />}
+      {view === "calendar" && (
+        <Calendar session={session} holidays={holidays} homeHolidays={homeHolidays} />
+      )}
       {view === "trips" && <Trips />}
       {view === "plan" && <Plan />}
       {view === "burndown" && <Burndown />}

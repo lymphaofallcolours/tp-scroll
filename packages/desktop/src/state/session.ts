@@ -22,6 +22,7 @@ type SessionState = {
   readonly status: Status;
   readonly session: Session | null;
   readonly holidays: ReadonlyArray<Holiday>;
+  readonly homeHolidays: ReadonlyArray<Holiday>;
   readonly isDemo: boolean;
   readonly errorMessage: string | null;
   readonly summaries: ReadonlyArray<SessionSummary>;
@@ -71,10 +72,21 @@ const loadHolidaysFor = async (session: Session): Promise<ReadonlyArray<Holiday>
   }
 };
 
+const loadHomeHolidaysFor = async (session: Session): Promise<ReadonlyArray<Holiday>> => {
+  if (session.homeCountry === session.residenceCountry) return [];
+  try {
+    const year = fromDayInt(session.cycle.start).year;
+    return await bridge.holidays.forCountry(session.homeCountry, year);
+  } catch {
+    return [];
+  }
+};
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   status: "idle",
   session: null,
   holidays: [],
+  homeHolidays: [],
   isDemo: false,
   errorMessage: null,
   summaries: [],
@@ -103,11 +115,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
       const isDemo = session === null;
       const actual = session ?? buildDemoSession();
-      const holidays = await loadHolidaysFor(actual);
+      const [holidays, homeHolidays] = await Promise.all([
+        loadHolidaysFor(actual),
+        loadHomeHolidaysFor(actual),
+      ]);
       set({
         status: "ready",
         session: actual,
         holidays,
+        homeHolidays,
         isDemo,
         errorMessage: null,
         summaries,
@@ -163,16 +179,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const fresh = defaultSession({ id, name, residenceCountry, homeCountry });
     await bridge.sessions.save(fresh);
     await bridge.active.set(id);
-    const holidays = await loadHolidaysFor(fresh);
+    const [holidays, homeHolidays] = await Promise.all([
+      loadHolidaysFor(fresh),
+      loadHomeHolidaysFor(fresh),
+    ]);
     const summaries = await bridge.sessions.list();
-    set({ session: fresh, holidays, isDemo: false, summaries });
+    set({ session: fresh, holidays, homeHolidays, isDemo: false, summaries });
   },
 
   switchSession: async (id) => {
     const session = await bridge.sessions.load(id);
     await bridge.active.set(id);
-    const holidays = await loadHolidaysFor(session);
-    set({ session, holidays, isDemo: false });
+    const [holidays, homeHolidays] = await Promise.all([
+      loadHolidaysFor(session),
+      loadHomeHolidaysFor(session),
+    ]);
+    set({ session, holidays, homeHolidays, isDemo: false });
   },
 
   deleteSession: async (id) => {
@@ -185,8 +207,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         await get().switchSession(summaries[0]!.id);
       } else {
         const demo = buildDemoSession();
-        const holidays = await loadHolidaysFor(demo);
-        set({ session: demo, holidays, isDemo: true });
+        const [holidays, homeHolidays] = await Promise.all([
+          loadHolidaysFor(demo),
+          loadHomeHolidaysFor(demo),
+        ]);
+        set({ session: demo, holidays, homeHolidays, isDemo: true });
       }
     }
   },
@@ -214,8 +239,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const rolled = rollCycle(s, newCycle, newBuckets);
     set({ session: rolled });
     await persist(rolled, get().isDemo);
-    const holidays = await loadHolidaysFor(rolled);
-    set({ holidays });
+    const [holidays, homeHolidays] = await Promise.all([
+      loadHolidaysFor(rolled),
+      loadHomeHolidaysFor(rolled),
+    ]);
+    set({ holidays, homeHolidays });
   },
 
   setFlightConstraints: async (constraints) => {
@@ -252,4 +280,5 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ session: next });
     await persist(next, get().isDemo);
   },
+
 }));

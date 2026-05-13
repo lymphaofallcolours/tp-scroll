@@ -92,10 +92,19 @@
 
 .swatchResidence { background: var(--surface-sunk); }
 .swatchWeekend { background: var(--accent-weekend); opacity: 0.7; }
-.swatchHoliday { background: var(--accent-holiday-soft); position: relative; }
-.swatchHoliday::after {
-  content: ""; position: absolute; top: 2px; left: 2px;
-  width: 4px; height: 4px; border-radius: 50%; background: var(--accent-holiday);
+.swatchHoliday { background: var(--accent-holiday); }
+.swatchHomeHoliday {
+  background: var(--surface-sunk);
+  position: relative;
+}
+.swatchHomeHoliday::before {
+  content: "";
+  position: absolute;
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent var(--accent-bucket-parental) transparent transparent;
 }
 .swatchBlocked {
   background: var(--accent-blocked-soft);

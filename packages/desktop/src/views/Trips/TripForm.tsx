@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import {
+  computeTripCost,
   dayIntFromIso,
   isoFromDayInt,
   type DayAttribution,
   type Session,
   type Trip,
 } from "@tp-scroll/core";
+import type { Holiday } from "@tp-scroll/adapter-holidays";
 
 import { DayOverridesEditor } from "./DayOverridesEditor.js";
 import styles from "./Trips.module.css";
@@ -14,6 +16,7 @@ type Props = {
   readonly session: Session;
   readonly initial: Trip | null; // null = new
   readonly isDemo: boolean;
+  readonly holidays: ReadonlyArray<Holiday>;
   readonly onSubmit: (trip: Trip) => Promise<void> | void;
   readonly onCancel: () => void;
   readonly onDelete: (() => Promise<void> | void) | null;
@@ -30,6 +33,7 @@ export const TripForm = ({
   session,
   initial,
   isDemo,
+  holidays,
   onSubmit,
   onCancel,
   onDelete,
@@ -49,6 +53,25 @@ export const TripForm = ({
   const parsedTo = useMemo(() => safeIso(to), [to]);
   const valid =
     parsedFrom !== null && parsedTo !== null && parsedFrom <= parsedTo;
+
+  // Live preview of leave-cost / away-days / travel-days as the form changes.
+  // Uses the same computeTripCost the optimizer + balance use, so the number
+  // here is exactly what'll be charged on save.
+  const preview = useMemo(() => {
+    if (!valid || parsedFrom === null || parsedTo === null) return null;
+    const draft: Trip = {
+      id: initial?.id ?? "preview",
+      departure: parsedFrom,
+      return: parsedTo,
+      bucketId,
+      isActual,
+      dayOverrides: overrides.filter((o) => o.day >= parsedFrom && o.day <= parsedTo),
+    };
+    const holidaySet = new Set(holidays.map((h) => h.day));
+    return computeTripCost(draft, session, holidaySet);
+  }, [valid, parsedFrom, parsedTo, bucketId, isActual, overrides, initial, holidays, session]);
+
+  const totalDaysInTrip = parsedFrom !== null && parsedTo !== null ? parsedTo - parsedFrom + 1 : 0;
 
   const handleSubmit = (): void => {
     if (!valid || parsedFrom === null || parsedTo === null) return;
@@ -137,6 +160,50 @@ export const TripForm = ({
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
+
+      {preview !== null && (
+        <div
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            background: "var(--surface-page)",
+            border: "1px solid var(--surface-edge)",
+            borderRadius: "var(--radius-cell)",
+            marginBottom: "var(--space-4)",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "var(--space-3)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--type-mono-sm)",
+            color: "var(--ink-secondary)",
+          }}
+          title="Computed from current dates, weekends, public holidays, and any per-day overrides below"
+        >
+          <div>
+            <span style={{ display: "block", textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--ink-tertiary)" }}>
+              total
+            </span>
+            <span style={{ fontSize: "var(--type-body)", color: "var(--ink-primary)" }}>
+              {totalDaysInTrip}d
+            </span>
+          </div>
+          <div>
+            <span style={{ display: "block", textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--ink-tertiary)" }}>
+              leave cost
+            </span>
+            <span style={{ fontSize: "var(--type-body)", color: "var(--accent-trip)" }}>
+              {preview.leaveCost}d
+            </span>
+          </div>
+          <div>
+            <span style={{ display: "block", textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--ink-tertiary)" }}>
+              away
+            </span>
+            <span style={{ fontSize: "var(--type-body)", color: "var(--ink-primary)" }}>
+              {preview.awayDays}d
+            </span>
+          </div>
+        </div>
+      )}
 
       <DayOverridesEditor
         departure={parsedFrom}

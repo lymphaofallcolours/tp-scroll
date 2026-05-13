@@ -24,6 +24,10 @@ export type DayCell = {
   readonly kind: DayKind;
   /** The bucket kind the trip is charged to (when kind is trip-*). */
   readonly bucketKind?: BucketKind;
+  /** True if this day is also a public holiday in the user's home country. */
+  readonly homeHoliday?: boolean;
+  /** The holiday name, when known. */
+  readonly holidayName?: string;
   readonly label?: string;
 };
 
@@ -41,11 +45,13 @@ export type MonthView = {
 export const buildYearView = (
   session: Session,
   holidays: ReadonlyArray<Holiday>,
+  homeHolidays: ReadonlyArray<Holiday> = [],
 ): ReadonlyArray<MonthView> => {
   const startDate = fromDayInt(session.cycle.start);
   const year = startDate.year;
 
-  const holidaySet = new Set(holidays.map((h) => h.day));
+  const holidayByDay = new Map(holidays.map((h) => [h.day, h.name] as const));
+  const homeHolidayByDay = new Map(homeHolidays.map((h) => [h.day, h.name] as const));
   const trips = session.trips;
   const blocked = session.blocked;
 
@@ -55,8 +61,16 @@ export const buildYearView = (
   const classify = (
     day: DayInt,
     date: Temporal.PlainDate,
-  ): { kind: DayKind; bucketKind?: BucketKind } => {
+  ): {
+    kind: DayKind;
+    bucketKind?: BucketKind;
+    homeHoliday?: boolean;
+    holidayName?: string;
+  } => {
     if (date.year !== year) return { kind: "blank" };
+
+    const homeHolidayName = homeHolidayByDay.get(day);
+    const residenceHolidayName = holidayByDay.get(day);
 
     const inTrip = trips.find((t) => day >= t.departure && day <= t.return);
     if (inTrip) {
@@ -64,11 +78,31 @@ export const buildYearView = (
       return {
         kind: inTrip.isActual ? "trip-actual" : "trip-planned",
         ...(bk !== undefined ? { bucketKind: bk } : {}),
+        ...(homeHolidayName !== undefined ? { homeHoliday: true, holidayName: homeHolidayName } : {}),
+        ...(residenceHolidayName !== undefined && homeHolidayName === undefined
+          ? { holidayName: residenceHolidayName }
+          : {}),
       };
     }
 
-    if (blocked.some((b) => day >= b.start && day <= b.end)) return { kind: "blocked" };
-    if (holidaySet.has(day)) return { kind: "holiday" };
+    if (blocked.some((b) => day >= b.start && day <= b.end)) {
+      return {
+        kind: "blocked",
+        ...(homeHolidayName !== undefined ? { homeHoliday: true, holidayName: homeHolidayName } : {}),
+      };
+    }
+    if (residenceHolidayName !== undefined) {
+      return {
+        kind: "holiday",
+        holidayName: residenceHolidayName,
+        ...(homeHolidayName !== undefined ? { homeHoliday: true } : {}),
+      };
+    }
+    if (homeHolidayName !== undefined) {
+      // Home-only holiday: looks like a residence weekday but with the home marker.
+      const k: DayKind = isWeekend(day, session.residenceCountry) ? "weekend" : "residence";
+      return { kind: k, homeHoliday: true, holidayName: homeHolidayName };
+    }
     if (isWeekend(day, session.residenceCountry)) return { kind: "weekend" };
     return { kind: "residence" };
   };
@@ -95,6 +129,8 @@ export const buildYearView = (
         date,
         kind: classification.kind,
         ...(classification.bucketKind !== undefined ? { bucketKind: classification.bucketKind } : {}),
+        ...(classification.homeHoliday === true ? { homeHoliday: true } : {}),
+        ...(classification.holidayName !== undefined ? { holidayName: classification.holidayName } : {}),
       };
     }
 

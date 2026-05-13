@@ -23,8 +23,10 @@ const TOKENS = {
   inkTertiary: "#6b7488",
   inkFaint: "#aaa794",
   edge: "#d4c8ad",
-  sage: "#7a8e62",
+  sage: "#7a8e62",         // actuals — bucket-annual
   sageSoft: "#c4cdb1",
+  teal: "#4f7c84",         // projected — bucket-parental (distinct hue from sage)
+  amber: "#b08440",        // budget warning — bucket-conference (warm contrast)
   red: "#a85333",
   surface: "#f4ede0",
 };
@@ -54,7 +56,7 @@ export const Burndown = (): JSX.Element | null => {
         data: data.actuals.slice(),
         borderColor: TOKENS.sage,
         backgroundColor: `${TOKENS.sage}26`,
-        borderWidth: 2.5,
+        borderWidth: 3,
         fill: true,
         tension: 0,
         stepped: "after" as const,
@@ -64,9 +66,9 @@ export const Burndown = (): JSX.Element | null => {
       {
         label: "Projected (actual + planned)",
         data: data.projected.slice(),
-        borderColor: TOKENS.sage,
-        borderWidth: 1.5,
-        borderDash: [5, 4],
+        borderColor: TOKENS.teal,
+        borderWidth: 2,
+        borderDash: [8, 5],
         fill: false,
         tension: 0,
         stepped: "after" as const,
@@ -77,8 +79,8 @@ export const Burndown = (): JSX.Element | null => {
         label: `Budget (${data.budget})`,
         data: Array(data.labels.length).fill(data.budget),
         borderColor: TOKENS.red,
-        borderWidth: 1,
-        borderDash: [2, 4],
+        borderWidth: 2,
+        borderDash: [2, 3],
         fill: false,
         pointRadius: 0,
       },

@@ -94,20 +94,25 @@
 }
 
 .cellHoliday {
-  background: var(--accent-holiday-soft);
-  color: var(--ink-primary);
+  background: var(--accent-holiday);
+  color: var(--surface-card);
+  font-weight: 500;
   position: relative;
 }
 
-.cellHoliday::after {
+/* Home-country holiday — a small triangular notch in the top-right corner.
+   Composable with any base kind so a residence holiday that is ALSO a home
+   holiday paints the gold cell AND the corner mark. */
+.cellHomeHoliday::before {
   content: "";
   position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent-holiday);
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 8px 0;
+  border-color: transparent var(--accent-bucket-parental) transparent transparent;
 }
 
 .cellBlocked {

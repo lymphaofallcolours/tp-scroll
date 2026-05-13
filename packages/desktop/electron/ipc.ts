@@ -73,9 +73,16 @@ export const registerIpc = (): void => {
   ipcMain.handle("active:get", () => loadActive());
   ipcMain.handle("active:set", (_, id: string) => setActive(id));
 
-  ipcMain.handle("holidays:forCountry", (_, cc: string, year: number) =>
-    holidayProvider.forCountry(cc, year),
-  );
+  ipcMain.handle("holidays:forCountry", async (_, cc: string, year: number) => {
+    try {
+      const result = await holidayProvider.forCountry(cc, year);
+      console.log(`[ipc] holidays:forCountry(${cc}, ${year}) → ${result.length} holidays`);
+      return result;
+    } catch (err) {
+      console.error(`[ipc] holidays:forCountry(${cc}, ${year}) FAILED:`, err);
+      return [];
+    }
+  });
 
   ipcMain.handle(
     "optimizer:run",

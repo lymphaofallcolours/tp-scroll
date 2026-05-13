@@ -88,20 +88,21 @@
 
 .lineSwatch {
   width: 24px;
-  height: 2px;
+  height: 3px;
   background: var(--accent-trip);
   border-radius: 1px;
 }
 
 .lineSwatch.dashed {
   background: transparent;
-  border-top: 2px dashed var(--accent-trip);
+  border-top: 2px dashed var(--accent-bucket-parental);
   height: 0;
 }
 
 .lineSwatch.budget {
-  background: var(--accent-blocked);
-  opacity: 0.7;
+  background: transparent;
+  border-top: 2px dotted var(--accent-blocked);
+  height: 0;
 }
 
 .note {
