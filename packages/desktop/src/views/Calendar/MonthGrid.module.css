@@ -78,6 +78,16 @@
   transform: scale(1.06);
 }
 
+.cellInteractive {
+  border: none;
+  cursor: pointer;
+  outline-offset: 1px;
+}
+
+.cellInteractive:focus-visible {
+  outline: 2px solid var(--accent-trip);
+}
+
 .cellBlank {
   background: transparent;
   pointer-events: none;

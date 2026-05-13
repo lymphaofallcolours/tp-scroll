@@ -3,6 +3,7 @@ import {
   defaultSession,
   fromDayInt,
   rollCycle,
+  type AnchorDate,
   type BlockedPeriod,
   type BucketKind,
   type DepartureMode,
@@ -80,6 +81,8 @@ type SessionState = {
   readonly deleteRegion: (id: string) => Promise<void>;
   readonly setCycleRules: (patch: CycleRulesPatch) => Promise<void>;
   readonly setDepartureMode: (mode: DepartureMode) => Promise<void>;
+  readonly addAnchor: (input: AnchorDate) => Promise<void>;
+  readonly deleteAnchor: (day: number) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -390,6 +393,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const s = get().session;
     if (!s) return;
     const next = touch({ ...s, departureMode: mode });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  addAnchor: async (input) => {
+    const s = get().session;
+    if (!s) return;
+    if (s.anchors.some((a) => a.day === input.day && a.preferIn === input.preferIn)) return;
+    const next = touch({ ...s, anchors: [...s.anchors, input] });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  deleteAnchor: async (day) => {
+    const s = get().session;
+    if (!s) return;
+    const next = touch({ ...s, anchors: s.anchors.filter((a) => a.day !== day) });
     set({ session: next });
     await persist(next, get().isDemo);
   },

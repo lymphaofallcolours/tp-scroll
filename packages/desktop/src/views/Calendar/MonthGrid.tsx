@@ -16,6 +16,7 @@ const cellClassFor: Record<DayCell["kind"], string> = {
 
 type Props = {
   readonly view: MonthView;
+  readonly onCellClick?: (cell: DayCell, rect: DOMRect) => void;
 };
 
 const countByKind = (view: MonthView): Map<DayCell["kind"], number> => {
@@ -41,7 +42,7 @@ const tripStyleFor = (cell: DayCell): React.CSSProperties | undefined => {
   return { background: soft, color: "var(--ink-primary)", borderColor: main };
 };
 
-export const MonthGrid = ({ view }: Props): JSX.Element => {
+export const MonthGrid = ({ view, onCellClick }: Props): JSX.Element => {
   const counts = countByKind(view);
   const tripDays = (counts.get("trip-actual") ?? 0) + (counts.get("trip-planned") ?? 0);
   const holidays = counts.get("holiday") ?? 0;
@@ -78,14 +79,19 @@ export const MonthGrid = ({ view }: Props): JSX.Element => {
             if (cell.holidayName) titleParts.push(`“${cell.holidayName}”`);
             const title = titleParts.join(" — ");
             return (
-              <div
+              <button
                 key={`c-${wIdx}-${dIdx}`}
-                className={`${styles.cell} ${cls}${homeCls}`}
+                type="button"
+                className={`${styles.cell} ${styles.cellInteractive} ${cls}${homeCls}`}
                 {...(style !== undefined ? { style } : {})}
                 title={title}
+                onClick={(e) => {
+                  if (!onCellClick) return;
+                  onCellClick(cell, e.currentTarget.getBoundingClientRect());
+                }}
               >
                 {cell.date.day}
-              </div>
+              </button>
             );
           }),
         )}

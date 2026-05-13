@@ -1,0 +1,105 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.panel {
+  position: fixed;
+  z-index: 100;
+  min-width: 260px;
+  max-width: 360px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-edge);
+  border-radius: 6px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 12px 28px -8px rgba(26, 36, 51, 0.22);
+  padding: var(--space-4);
+  animation: appear 120ms var(--ease-quiet);
+}
+
+@keyframes appear {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  border-bottom: 1px solid var(--surface-edge);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.date {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  font-weight: 380;
+  color: var(--ink-primary);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.holidayName {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--accent-holiday);
+  margin-top: 4px;
+}
+
+.blockedNote {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--ink-secondary);
+  margin-top: 6px;
+}
+
+.tripNote {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  color: var(--accent-trip);
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.actionBtn {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  letter-spacing: 0.08em;
+  padding: var(--space-3);
+  background: var(--surface-page);
+  color: var(--ink-primary);
+  border: 1px solid var(--surface-edge);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-quiet),
+    border-color var(--duration-fast) var(--ease-quiet);
+}
+
+.actionBtn:hover {
+  background: var(--surface-sunk);
+  border-color: var(--ink-tertiary);
+}
+
+.actionBtnDanger {
+  color: var(--accent-blocked);
+}
+
+.actionBtnDanger:hover {
+  background: var(--accent-blocked-soft);
+  border-color: var(--accent-blocked);
+}

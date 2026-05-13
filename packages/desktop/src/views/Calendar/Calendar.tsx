@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   computeBucketBalances,
@@ -7,8 +7,9 @@ import {
 } from "@tp-scroll/core";
 import type { Holiday } from "@tp-scroll/adapter-holidays";
 
+import { DayPopover } from "./DayPopover.js";
 import { MonthGrid } from "./MonthGrid.js";
-import { buildYearView } from "./calendar-data.js";
+import { buildYearView, type DayCell } from "./calendar-data.js";
 import styles from "./Calendar.module.css";
 
 type Props = {
@@ -22,6 +23,7 @@ export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.E
     () => buildYearView(session, holidays, homeHolidays),
     [session, holidays, homeHolidays],
   );
+  const [openCell, setOpenCell] = useState<{ cell: DayCell; rect: DOMRect } | null>(null);
   const balances = useMemo(
     () => computeBucketBalances(session, new Set(holidays.map((h) => h.day))),
     [session, holidays],
@@ -116,13 +118,26 @@ export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.E
 
       <div className={styles.months}>
         {months.map((m) => (
-          <MonthGrid key={`${m.year}-${m.month}`} view={m} />
+          <MonthGrid
+            key={`${m.year}-${m.month}`}
+            view={m}
+            onCellClick={(cell, rect) => setOpenCell({ cell, rect })}
+          />
         ))}
       </div>
 
       <p className={styles.footnote}>
         “Some places are so far you only see them by going home.”
       </p>
+
+      {openCell !== null && (
+        <DayPopover
+          cell={openCell.cell}
+          anchorRect={openCell.rect}
+          session={session}
+          onClose={() => setOpenCell(null)}
+        />
+      )}
     </main>
   );
 };
