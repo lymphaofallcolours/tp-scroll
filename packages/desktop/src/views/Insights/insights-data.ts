@@ -1,4 +1,14 @@
-import { computeTripCost, isoFromDayInt, type DayInt, type Session } from "@tp-scroll/core";
+import {
+  bucketKindColor,
+  computeBucketBalances,
+  computeTripCost,
+  fromDayInt,
+  isoFromDayInt,
+  resolveAttribution,
+  type BucketKind,
+  type DayInt,
+  type Session,
+} from "@tp-scroll/core";
 import type { Holiday } from "@tp-scroll/adapter-holidays";
 
 export type BurndownSeries = {
@@ -35,14 +45,12 @@ export const buildBurndown = (
   let projectedSum = 0;
 
   for (let d: DayInt = session.cycle.start; d <= session.cycle.end; d++) {
-    // Apply charges that land on this exact day.
     for (const c of charges) {
       if (c.on === d) {
         if (c.isActual) actualSum += c.cost;
         projectedSum += c.cost;
       }
     }
-    // Downsample to weekly samples to keep the chart legible.
     if (
       d === session.cycle.start ||
       d === session.cycle.end ||
@@ -61,4 +69,151 @@ export const buildBurndown = (
     budget: session.cycle.totalDays,
     buffer: session.cycle.bufferAtEnd,
   };
+};
+
+export type BucketSlice = {
+  readonly bucketId: string;
+  readonly bucketName: string;
+  readonly kind: BucketKind;
+  readonly consumed: number;
+  readonly remaining: number;
+  readonly total: number;
+  readonly colorVar: string;
+};
+
+/**
+ * Per-bucket consumption breakdown. Drives the bucket donut chart. Numbers
+ * come straight from computeBucketBalances so the donut and the calendar
+ * "Consumed/Remaining" widgets never disagree.
+ */
+export const buildBucketSlices = (
+  session: Session,
+  holidays: ReadonlyArray<Holiday>,
+): ReadonlyArray<BucketSlice> => {
+  const holidaySet = new Set(holidays.map((h) => h.day));
+  const balances = computeBucketBalances(session, holidaySet);
+  return balances.map((b) => {
+    const bucket = session.buckets.find((sb) => sb.id === b.bucketId);
+    return {
+      bucketId: b.bucketId,
+      bucketName: bucket?.name ?? b.bucketId,
+      kind: bucket?.kind ?? "annual",
+      consumed: b.balance.consumed,
+      remaining: b.balance.remaining,
+      total: b.balance.consumed + b.balance.remaining,
+      colorVar: bucketKindColor(bucket?.kind ?? "annual"),
+    };
+  });
+};
+
+export type AnchorRow = {
+  readonly day: DayInt;
+  readonly iso: string;
+  readonly weekday: string;
+  readonly preferIn: "home" | "residence";
+  readonly weight: number;
+  readonly satisfied: boolean;
+  readonly explanation: string;
+};
+
+/**
+ * For each anchor, compute whether the current set of trips satisfies it.
+ * "Satisfied" means the user is in the preferred location on that day —
+ * derived from each trip's per-day attribution (location: residence / home /
+ * transit).
+ */
+export const buildAnchorRows = (
+  session: Session,
+  holidays: ReadonlyArray<Holiday>,
+): ReadonlyArray<AnchorRow> => {
+  const holidaySet = new Set(holidays.map((h) => h.day));
+  const locationByDay = new Map<DayInt, "residence" | "home" | "transit">();
+  for (const trip of session.trips) {
+    if (!trip.isActual) continue;
+    for (const r of resolveAttribution(trip, session, holidaySet)) {
+      locationByDay.set(r.day, r.location);
+    }
+  }
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return session.anchors
+    .slice()
+    .sort((a, b) => a.day - b.day)
+    .map((a) => {
+      const loc = locationByDay.get(a.day) ?? "residence";
+      const atHome = loc !== "residence";
+      const satisfied = a.preferIn === "home" ? atHome : !atHome;
+      const date = fromDayInt(a.day);
+      const explanation = satisfied
+        ? `you're in ${loc} on this day, which matches preferIn=${a.preferIn}`
+        : `you're in ${loc} on this day, but you prefer ${a.preferIn}`;
+      return {
+        day: a.day,
+        iso: isoFromDayInt(a.day),
+        weekday: dayNames[date.dayOfWeek - 1] ?? "—",
+        preferIn: a.preferIn,
+        weight: a.weight,
+        satisfied,
+        explanation,
+      };
+    });
+};
+
+export type TripLengthBin = {
+  readonly label: string;
+  readonly count: number;
+};
+
+/**
+ * Histogram of trip durations. Bins are tuned for typical leave usage:
+ * 1d (day trips), 2-3d (weekend escapes), 4-7d (workweeks), 8-14d (real
+ * holidays), 15+d (long trips). Counts only actual trips; planned trips are
+ * shown separately on the calendar.
+ */
+export const buildTripLengthHistogram = (
+  session: Session,
+): ReadonlyArray<TripLengthBin> => {
+  const bins = [
+    { label: "1d", min: 1, max: 1, count: 0 },
+    { label: "2-3d", min: 2, max: 3, count: 0 },
+    { label: "4-7d", min: 4, max: 7, count: 0 },
+    { label: "8-14d", min: 8, max: 14, count: 0 },
+    { label: "15+d", min: 15, max: Number.POSITIVE_INFINITY, count: 0 },
+  ];
+  for (const t of session.trips) {
+    if (!t.isActual) continue;
+    const len = t.return - t.departure + 1;
+    const bin = bins.find((b) => len >= b.min && len <= b.max);
+    if (bin) bin.count += 1;
+  }
+  return bins.map((b) => ({ label: b.label, count: b.count }));
+};
+
+export type LeverageStats = {
+  readonly leaveDays: number;
+  readonly awayDays: number;
+  readonly freeDays: number;
+  readonly leveragePct: number;
+};
+
+/**
+ * Across all trips (actual + planned), how many away-days were "free" —
+ * not charged to a leave-day (weekends, holidays, or day-overrides).
+ * Reported as a percentage of total away-days so a single number tells the
+ * full story.
+ */
+export const buildLeverageStats = (
+  session: Session,
+  holidays: ReadonlyArray<Holiday>,
+): LeverageStats => {
+  const holidaySet = new Set(holidays.map((h) => h.day));
+  let leaveDays = 0;
+  let awayDays = 0;
+  for (const t of session.trips) {
+    const cost = computeTripCost(t, session, holidaySet);
+    leaveDays += cost.leaveCost;
+    awayDays += cost.awayDays;
+  }
+  const freeDays = Math.max(0, awayDays - leaveDays);
+  const leveragePct = awayDays === 0 ? 0 : Math.round((freeDays / awayDays) * 100);
+  return { leaveDays, awayDays, freeDays, leveragePct };
 };
