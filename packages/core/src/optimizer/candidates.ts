@@ -7,6 +7,7 @@ import {
   respectsBookingHorizon,
   tripOverlapsBlocked,
 } from "../constraints/index.js";
+import { regionForDay } from "../session/region.js";
 import type { Session } from "../session/session.js";
 import { resolveAttribution } from "../trips/attribution.js";
 import { computeTripCost } from "../trips/cost.js";
@@ -38,7 +39,10 @@ export const generateCandidates = (
   };
 
   for (let start = baseRange.start; start <= baseRange.end; start++) {
-    for (let length = session.minTripDays; length <= session.maxTripDays; length++) {
+    const region = regionForDay(session.regions, start);
+    const minLen = region?.minTripDays ?? session.minTripDays;
+    const maxLen = region?.maxTripDays ?? session.maxTripDays;
+    for (let length = minLen; length <= maxLen; length++) {
       const end = start + length - 1;
       if (end > baseRange.end) break;
 

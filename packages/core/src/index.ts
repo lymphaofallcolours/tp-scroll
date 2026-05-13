@@ -90,6 +90,9 @@ export {
   defaultSession,
   rollCycle,
   carryoverFromHistory,
+  type RegionOverride,
+  RegionOverrideSchema,
+  regionForDay,
 } from "./session/index.js";
 
 export {

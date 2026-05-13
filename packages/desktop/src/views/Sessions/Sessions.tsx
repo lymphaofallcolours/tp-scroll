@@ -7,6 +7,7 @@ import {
   type BlockedPeriod,
   type BucketKind,
   type FlightConstraints,
+  type RegionOverride,
   type Session,
 } from "@tp-scroll/core";
 
@@ -45,6 +46,8 @@ export const Sessions = (): JSX.Element | null => {
   const setTripBounds = useSessionStore((s) => s.setTripBounds);
   const addBlocked = useSessionStore((s) => s.addBlocked);
   const deleteBlocked = useSessionStore((s) => s.deleteBlocked);
+  const addRegion = useSessionStore((s) => s.addRegion);
+  const deleteRegion = useSessionStore((s) => s.deleteRegion);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -231,6 +234,14 @@ export const Sessions = (): JSX.Element | null => {
             />
           )}
 
+          {session && (
+            <RegionOverridesCard
+              session={session}
+              onAdd={async (input) => addRegion(input)}
+              onDelete={async (id) => deleteRegion(id)}
+            />
+          )}
+
           <AmadeusCredentialsCard />
         </section>
 
@@ -403,6 +414,184 @@ const HomePeriodsCard = ({
       </div>
       <button type="button" className={styles.primaryBtn} onClick={() => void onAddClick()}>
         Add period
+      </button>
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
+  );
+};
+
+const RegionOverridesCard = ({
+  session,
+  onAdd,
+  onDelete,
+}: {
+  session: Session;
+  onAdd: (input: RegionOverride) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}): JSX.Element => {
+  const cycleStartIso = isoFromDayInt(session.cycle.start);
+  const cycleEndIso = isoFromDayInt(session.cycle.end);
+
+  const [name, setName] = useState("");
+  const [fromIso, setFromIso] = useState(cycleStartIso);
+  const [toIso, setToIso] = useState(cycleStartIso);
+  const [minLen, setMinLen] = useState("");
+  const [maxLen, setMaxLen] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const numOrUndef = (s: string): number | undefined => {
+    if (s.trim().length === 0) return undefined;
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+  };
+
+  const onAddClick = async (): Promise<void> => {
+    setError(null);
+    if (name.trim().length === 0) {
+      setError("give the region a name");
+      return;
+    }
+    const id =
+      `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${fromIso}`;
+    try {
+      const min = numOrUndef(minLen);
+      const max = numOrUndef(maxLen);
+      const region: RegionOverride = {
+        id,
+        name: name.trim(),
+        start: dayIntFromIso(fromIso),
+        end: dayIntFromIso(toIso),
+        ...(min !== undefined ? { minTripDays: min } : {}),
+        ...(max !== undefined ? { maxTripDays: max } : {}),
+      };
+      await onAdd(region);
+      setName("");
+      setMinLen("");
+      setMaxLen("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const sorted = [...session.regions].sort((a, b) => a.start - b.start);
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>
+        Region overrides
+        <Hint text="Time windows where trip-length bounds differ from the session defaults. Useful for 'allow 3-week trips during summer' or 'only 5+ day trips during exam season'. Leave a field blank to keep the session default for that bound. Gap and flight rules still apply globally." />
+      </h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Defaults: trips <strong>{session.minTripDays}–{session.maxTripDays}</strong> days.
+      </p>
+
+      {sorted.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {sorted.map((r) => {
+            const minTxt = r.minTripDays !== undefined ? r.minTripDays : "·";
+            const maxTxt = r.maxTripDays !== undefined ? r.maxTripDays : "·";
+            return (
+              <div
+                key={r.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto auto auto",
+                  gap: "var(--space-3)",
+                  alignItems: "center",
+                  padding: "var(--space-2) var(--space-3)",
+                  background: "var(--surface-page)",
+                  border: "1px solid var(--surface-edge)",
+                  borderRadius: "var(--radius-cell)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--type-mono)",
+                }}
+              >
+                <span style={{ color: "var(--ink-primary)" }}>{r.name}</span>
+                <span style={{ color: "var(--ink-tertiary)", fontFeatureSettings: "'tnum' 1" }}>
+                  {isoFromDayInt(r.start)} → {isoFromDayInt(r.end)}
+                </span>
+                <span style={{ color: "var(--ink-secondary)", fontFeatureSettings: "'tnum' 1" }}>
+                  trips {minTxt}–{maxTxt}d
+                </span>
+                <button
+                  type="button"
+                  className={`${styles.linkBtn} ${styles.danger}`}
+                  onClick={() => void onDelete(r.id)}
+                >
+                  delete
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>Name</span>
+        <input
+          type="text"
+          className={styles.input}
+          value={name}
+          placeholder="e.g. summer break"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>From</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={fromIso}
+            min={cycleStartIso}
+            max={cycleEndIso}
+            onChange={(e) => setFromIso(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>To</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={toIso}
+            min={cycleStartIso}
+            max={cycleEndIso}
+            onChange={(e) => setToIso(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Min trip (days)
+            <Hint text="Leave blank to keep the session default. Optimizer will skip candidate trips shorter than this within the region." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={1}
+            value={minLen}
+            placeholder={String(session.minTripDays)}
+            onChange={(e) => setMinLen(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Max trip (days)
+            <Hint text="Leave blank to keep the session default. Optimizer will consider candidate trips up to this length within the region — set higher than the global max to allow long summer trips." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={1}
+            value={maxLen}
+            placeholder={String(session.maxTripDays)}
+            onChange={(e) => setMaxLen(e.target.value)}
+          />
+        </div>
+      </div>
+      <button type="button" className={styles.primaryBtn} onClick={() => void onAddClick()}>
+        Add region
       </button>
       {error && <p className={styles.error}>{error}</p>}
     </div>

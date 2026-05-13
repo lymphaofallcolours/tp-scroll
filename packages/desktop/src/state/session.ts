@@ -8,6 +8,7 @@ import {
   type FlightConstraints,
   type LeaveBucket,
   type LeaveCycle,
+  type RegionOverride,
   type Session,
   type Trip,
 } from "@tp-scroll/core";
@@ -60,6 +61,8 @@ type SessionState = {
   }) => Promise<void>;
   readonly addBlocked: (input: BlockedPeriod) => Promise<void>;
   readonly deleteBlocked: (start: number, end: number) => Promise<void>;
+  readonly addRegion: (input: RegionOverride) => Promise<void>;
+  readonly deleteRegion: (id: string) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -323,6 +326,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ...s,
       blocked: s.blocked.filter((b) => !(b.start === start && b.end === end)),
     });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  addRegion: async (input) => {
+    const s = get().session;
+    if (!s) return;
+    if (input.end < input.start) throw new Error("end must be >= start");
+    if (s.regions.some((r) => r.id === input.id)) {
+      throw new Error(`a region with id "${input.id}" already exists`);
+    }
+    const next = touch({ ...s, regions: [...s.regions, input] });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  deleteRegion: async (id) => {
+    const s = get().session;
+    if (!s) return;
+    const next = touch({ ...s, regions: s.regions.filter((r) => r.id !== id) });
     set({ session: next });
     await persist(next, get().isDemo);
   },

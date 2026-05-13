@@ -49,6 +49,7 @@ export const defaultSession = (seed: SessionSeed): Session => {
     maxTripDays: 21,
     minGapDays: 0,
     maxGapDays: 365,
+    regions: [],
     travelDayConsumesLeaveByDefault: false,
     cycleHistory: [],
     createdAt: now,

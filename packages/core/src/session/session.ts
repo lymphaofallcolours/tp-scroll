@@ -8,6 +8,8 @@ import { LeaveBucketSchema } from "../leave/bucket.js";
 import { LeaveCycleSchema } from "../leave/cycle.js";
 import { TripSchema } from "../trips/trip.js";
 
+import { RegionOverrideSchema } from "./region.js";
+
 const DayIntSchema = z.number().int();
 const Iso2 = z
   .string()
@@ -60,6 +62,7 @@ export const SessionSchema = z
     maxTripDays: z.number().int().positive(),
     minGapDays: z.number().int().nonnegative().default(0),
     maxGapDays: z.number().int().nonnegative().default(365),
+    regions: z.array(RegionOverrideSchema).default([]),
     travelDayConsumesLeaveByDefault: z.boolean(),
     cycleHistory: z.array(HistoricalCycleSchema).default([]),
     createdAt: z.string(),

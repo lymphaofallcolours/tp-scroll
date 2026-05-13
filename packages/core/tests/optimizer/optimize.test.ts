@@ -129,4 +129,5 @@ describe("optimize", () => {
       expect(plans[i - 1]!.awayDaysTotal).toBeGreaterThanOrEqual(plans[i]!.awayDaysTotal);
     }
   });
+
 });
