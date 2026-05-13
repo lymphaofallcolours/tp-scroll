@@ -83,6 +83,7 @@ type SessionState = {
   readonly setDepartureMode: (mode: DepartureMode) => Promise<void>;
   readonly addAnchor: (input: AnchorDate) => Promise<void>;
   readonly deleteAnchor: (day: number) => Promise<void>;
+  readonly updateAnchor: (day: number, patch: Partial<Omit<AnchorDate, "day">>) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -410,6 +411,25 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const s = get().session;
     if (!s) return;
     const next = touch({ ...s, anchors: s.anchors.filter((a) => a.day !== day) });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  updateAnchor: async (day, patch) => {
+    const s = get().session;
+    if (!s) return;
+    const idx = s.anchors.findIndex((a) => a.day === day);
+    if (idx === -1) return;
+    const current = s.anchors[idx]!;
+    const merged: AnchorDate = {
+      day: current.day,
+      preferIn: patch.preferIn ?? current.preferIn,
+      weight: patch.weight ?? current.weight,
+    };
+    if (merged.weight < 0) throw new Error("anchor weight must be >= 0");
+    const nextAnchors = [...s.anchors];
+    nextAnchors[idx] = merged;
+    const next = touch({ ...s, anchors: nextAnchors });
     set({ session: next });
     await persist(next, get().isDemo);
   },

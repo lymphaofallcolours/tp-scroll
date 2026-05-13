@@ -45,6 +45,8 @@ ChartJS.register(
 );
 
 // Computed tokens consumed by Chart.js — keep in sync with tokens.css.
+// Chart.js paints to canvas and doesn't resolve CSS custom properties, so we
+// duplicate the palette here in hex form rather than passing `var(--…)` refs.
 const TOKENS = {
   ink: "#1a2433",
   inkTertiary: "#6b7488",
@@ -59,6 +61,14 @@ const TOKENS = {
   surface: "#f4ede0",
   card: "#f8f3e9",
   sunk: "#ece2cc",
+};
+
+const BUCKET_KIND_COLORS: Record<string, { main: string; soft: string }> = {
+  annual: { main: "#7a8e62", soft: "#c4cdb1" },
+  sick: { main: "#8a6a8d", soft: "#cdbbcd" },
+  parental: { main: "#4f7c84", soft: "#b7cfd2" },
+  conference: { main: "#9d5145", soft: "#d8b9af" },
+  other: { main: "#88837a", soft: "#c8c4bc" },
 };
 
 const FONT_MONO = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
@@ -328,17 +338,17 @@ const BucketDonutPanel = ({
   const values: number[] = [];
   const colors: string[] = [];
   for (const b of buckets) {
-    const main = `var(${b.colorVar})`;
-    const soft = `var(${b.colorVar}-soft)`;
+    const palette =
+      BUCKET_KIND_COLORS[b.kind] ?? BUCKET_KIND_COLORS["annual"]!;
     if (b.consumed > 0) {
       labels.push(`${b.bucketName} consumed`);
       values.push(b.consumed);
-      colors.push(main);
+      colors.push(palette.main);
     }
     if (b.remaining > 0) {
       labels.push(`${b.bucketName} remaining`);
       values.push(b.remaining);
-      colors.push(soft);
+      colors.push(palette.soft);
     }
   }
 
@@ -378,11 +388,13 @@ const BucketDonutPanel = ({
       <ul className={styles.bucketList}>
         {buckets.map((b) => {
           const pct = b.total === 0 ? 0 : Math.round((b.consumed / b.total) * 100);
+          const palette =
+            BUCKET_KIND_COLORS[b.kind] ?? BUCKET_KIND_COLORS["annual"]!;
           return (
             <li key={b.bucketId} className={styles.bucketRow}>
               <span
                 className={styles.bucketDot}
-                style={{ background: `var(${b.colorVar})` }}
+                style={{ background: palette.main }}
               />
               <span className={styles.bucketName}>{b.bucketName}</span>
               <span className={styles.bucketKindTag}>{b.kind}</span>
@@ -403,44 +415,54 @@ const LeveragePanel = ({
   stats: ReturnType<typeof buildLeverageStats>;
 }): JSX.Element => {
   const pct = stats.leveragePct;
+  const RADIUS = 120;
+  const CIRC = 2 * Math.PI * RADIUS;
   return (
     <Panel
       title="Weekend & holiday leverage"
       subtitle="share of away-days that don't consume leave"
     >
       <div className={styles.gaugeFrame}>
-        <div className={styles.gaugeValue}>{pct}%</div>
-        <div className={styles.gaugeRing}>
-          <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden="true">
-            <circle
-              cx="80"
-              cy="80"
-              r="64"
-              fill="none"
-              stroke={TOKENS.sunk}
-              strokeWidth="14"
-            />
-            <circle
-              cx="80"
-              cy="80"
-              r="64"
-              fill="none"
-              stroke={TOKENS.sage}
-              strokeWidth="14"
-              strokeDasharray={`${(pct / 100) * 2 * Math.PI * 64} ${2 * Math.PI * 64}`}
-              strokeDashoffset={2 * Math.PI * 64 * 0.25}
-              transform="rotate(-90 80 80)"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-        <div className={styles.gaugeDetail}>
-          <div><span className={styles.gaugeNum}>{stats.awayDays}</span> away-days total</div>
-          <div><span className={styles.gaugeNum}>{stats.leaveDays}</span> charged to leave</div>
-          <div>
-            <span className={styles.gaugeNum}>{stats.freeDays}</span> free
-            <span style={{ color: TOKENS.inkTertiary }}> · weekends + holidays + overrides</span>
+        <svg
+          className={styles.gaugeSvg}
+          viewBox="0 0 280 280"
+          aria-hidden="true"
+        >
+          <circle
+            cx="140"
+            cy="140"
+            r={RADIUS}
+            fill="none"
+            stroke={TOKENS.sunk}
+            strokeWidth="18"
+          />
+          <circle
+            cx="140"
+            cy="140"
+            r={RADIUS}
+            fill="none"
+            stroke={TOKENS.sage}
+            strokeWidth="18"
+            strokeDasharray={`${(pct / 100) * CIRC} ${CIRC}`}
+            strokeDashoffset={CIRC * 0.25}
+            transform="rotate(-90 140 140)"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className={styles.gaugeCenter}>
+          <div className={styles.gaugeValue}>{pct}%</div>
+          <div className={styles.gaugeBreakdown}>
+            <div>
+              <span className={styles.gaugeNum}>{stats.freeDays}</span>
+              <span className={styles.gaugeLabel}>free</span>
+            </div>
+            <div className={styles.gaugeSlash}>/</div>
+            <div>
+              <span className={styles.gaugeNum}>{stats.awayDays}</span>
+              <span className={styles.gaugeLabel}>away</span>
+            </div>
           </div>
+          <div className={styles.gaugeSubtle}>{stats.leaveDays}d charged to leave</div>
         </div>
       </div>
     </Panel>

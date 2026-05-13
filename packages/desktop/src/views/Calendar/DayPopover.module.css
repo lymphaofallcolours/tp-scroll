@@ -76,6 +76,51 @@
   margin-top: 6px;
 }
 
+.anchorEditor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.anchorEditorLabel {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+}
+
+.anchorField {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.anchorSelect,
+.anchorWeight {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  padding: 2px 6px;
+  background: var(--surface-page);
+  border: 1px solid var(--surface-edge);
+  border-radius: 3px;
+  color: var(--ink-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.anchorWeight {
+  width: 56px;
+  text-align: right;
+  font-feature-settings: "tnum" 1;
+}
+
 .anchorExplain {
   margin-top: 4px;
   font-family: var(--font-display);

@@ -34,6 +34,7 @@ export const DayPopover = ({ cell, anchorRect, session, onClose }: Props): JSX.E
   const openTripEditor = useUiStore((s) => s.openTripEditor);
   const addAnchor = useSessionStore((s) => s.addAnchor);
   const deleteAnchor = useSessionStore((s) => s.deleteAnchor);
+  const updateAnchor = useSessionStore((s) => s.updateAnchor);
   const addBlocked = useSessionStore((s) => s.addBlocked);
   const deleteBlocked = useSessionStore((s) => s.deleteBlocked);
 
@@ -158,10 +159,44 @@ export const DayPopover = ({ cell, anchorRect, session, onClose }: Props): JSX.E
           )}
           {anchorAtDay && (
             <div className={styles.anchorNote}>
-              ● anchor: prefer in <em>{anchorAtDay.preferIn}</em> · weight{" "}
-              <strong>{anchorAtDay.weight}</strong>
+              <div className={styles.anchorEditor}>
+                <span className={styles.anchorEditorLabel}>● anchor</span>
+                <label className={styles.anchorField}>
+                  prefer in
+                  <select
+                    className={styles.anchorSelect}
+                    value={anchorAtDay.preferIn}
+                    onChange={(e) =>
+                      void updateAnchor(cell.day, {
+                        preferIn: e.target.value as "home" | "residence",
+                      })
+                    }
+                  >
+                    <option value="home">home</option>
+                    <option value="residence">residence</option>
+                  </select>
+                </label>
+                <label className={styles.anchorField}>
+                  weight
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    className={styles.anchorWeight}
+                    value={anchorAtDay.weight}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      if (Number.isFinite(n) && n >= 0) {
+                        void updateAnchor(cell.day, { weight: n });
+                      }
+                    }}
+                  />
+                </label>
+              </div>
               <div className={styles.anchorExplain}>
-                The optimizer gets +{anchorAtDay.weight} when a plan keeps you in {anchorAtDay.preferIn} on this day.
+                The optimizer gets +{anchorAtDay.weight} on its anchor score when a plan keeps you
+                in {anchorAtDay.preferIn} on this day. Higher = more important.
               </div>
             </div>
           )}
