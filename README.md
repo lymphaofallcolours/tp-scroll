@@ -6,7 +6,7 @@ A TypeScript monorepo with a pure domain core, pluggable adapters for public-hol
 
 ## Status
 
-**v1.7** — Electron desktop app + CLI + engine + flight-aware optimizer. Six workspace packages:
+**v2.5** — flight-aware optimizer + per-kind buckets (annual / sick / parental / conference / other). Six workspace packages:
 
 - `@tp-scroll/core` — pure engine (calendar, leave cycles, trips, constraints, optimizer)
 - `@tp-scroll/adapter-holidays` — public-holiday providers (Nager + date-holidays fallback)
@@ -15,7 +15,7 @@ A TypeScript monorepo with a pure domain core, pluggable adapters for public-hol
 - `@tp-scroll/cli` — `tp-scroll` command-line tool
 - `@tp-scroll/desktop` — Electron app with calendar grid, trip CRUD, plan view (now with flight prices), burndown chart, sessions management
 
-285+ tests across the workspace including 7 fast-check optimizer invariants. Editorial-typographic UI built with Fraunces + JetBrains Mono on a warm-paper palette.
+290+ tests across the workspace including 7 fast-check optimizer invariants. Editorial-typographic UI built with Fraunces + JetBrains Mono on a warm-paper palette.
 
 See [`docs/`](docs/) for the architecture, CLI reference, and ADRs.
 

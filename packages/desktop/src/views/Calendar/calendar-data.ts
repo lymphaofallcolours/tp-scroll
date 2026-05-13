@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import {
   fromDayInt,
   isWeekend,
+  type BucketKind,
   type DayInt,
   type Session,
 } from "@tp-scroll/core";
@@ -21,6 +22,8 @@ export type DayCell = {
   readonly day: DayInt;
   readonly date: Temporal.PlainDate;
   readonly kind: DayKind;
+  /** The bucket kind the trip is charged to (when kind is trip-*). */
+  readonly bucketKind?: BucketKind;
   readonly label?: string;
 };
 
@@ -46,16 +49,28 @@ export const buildYearView = (
   const trips = session.trips;
   const blocked = session.blocked;
 
-  const classify = (day: DayInt, date: Temporal.PlainDate): DayKind => {
-    if (date.year !== year) return "blank";
+  const bucketKindFor = (bucketId: string): BucketKind | undefined =>
+    session.buckets.find((b) => b.id === bucketId)?.kind;
+
+  const classify = (
+    day: DayInt,
+    date: Temporal.PlainDate,
+  ): { kind: DayKind; bucketKind?: BucketKind } => {
+    if (date.year !== year) return { kind: "blank" };
 
     const inTrip = trips.find((t) => day >= t.departure && day <= t.return);
-    if (inTrip) return inTrip.isActual ? "trip-actual" : "trip-planned";
+    if (inTrip) {
+      const bk = bucketKindFor(inTrip.bucketId);
+      return {
+        kind: inTrip.isActual ? "trip-actual" : "trip-planned",
+        ...(bk !== undefined ? { bucketKind: bk } : {}),
+      };
+    }
 
-    if (blocked.some((b) => day >= b.start && day <= b.end)) return "blocked";
-    if (holidaySet.has(day)) return "holiday";
-    if (isWeekend(day, session.residenceCountry)) return "weekend";
-    return "residence";
+    if (blocked.some((b) => day >= b.start && day <= b.end)) return { kind: "blocked" };
+    if (holidaySet.has(day)) return { kind: "holiday" };
+    if (isWeekend(day, session.residenceCountry)) return { kind: "weekend" };
+    return { kind: "residence" };
   };
 
   return Array.from({ length: 12 }, (_, mIdx) => {
@@ -74,8 +89,13 @@ export const buildYearView = (
         const epoch = Temporal.PlainDate.from("2000-01-01");
         return epoch.until(date, { largestUnit: "days" }).days;
       })();
-      const kind = classify(dayInt, date);
-      cells[leading + d - 1] = { day: dayInt, date, kind };
+      const classification = classify(dayInt, date);
+      cells[leading + d - 1] = {
+        day: dayInt,
+        date,
+        kind: classification.kind,
+        ...(classification.bucketKind !== undefined ? { bucketKind: classification.bucketKind } : {}),
+      };
     }
 
     const weeks: (DayCell | null)[][] = [];

@@ -36,6 +36,7 @@ export const defaultSession = (seed: SessionSeed): Session => {
         name: "annual",
         cycleId: `${seed.id}-cycle`,
         totalDays: 25,
+        kind: "annual",
       },
     ],
     trips: [],

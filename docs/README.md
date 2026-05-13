@@ -12,7 +12,7 @@ Project documentation, kept in sync with the codebase at every commit.
 
 ## Status
 
-**v1.7** — engine + CLI + Electron desktop app + flight-aware optimizer.
+**v2.5** — flight-aware optimizer + per-kind buckets.
 
 ### Versions shipped on `main`
 
@@ -24,3 +24,4 @@ Project documentation, kept in sync with the codebase at every commit.
 | v1.0 | Electron desktop app — Calendar grid, Trip CRUD, Plan view, Burndown chart, Sessions management. Editorial-typographic UI ([`design/0008-frontend-design-tokens.md`](design/0008-frontend-design-tokens.md)). |
 | v1.5 | Flight adapter ([`design/0009-flights-amadeus.md`](design/0009-flights-amadeus.md)). New `@tp-scroll/adapter-flights` package. Amadeus Self-Service + Mock providers, in-memory LRU + TTL cache, `annotatePlan` orchestrator. Plan view shows per-trip + total flight prices behind an opt-in toggle. **Informational only.** |
 | v1.7 | Flight-aware optimizer ([`design/0010-flight-aware-optimizer.md`](design/0010-flight-aware-optimizer.md)). `FlightConstraints` (max duration, depart-after, arrive-before, AND/OR combine) on `Session`. `OptimizeOptions.flightInfo` + `priceAware` — 5-tier lex scoring with price as tiebreaker. Sessions view gets a Flight-constraints card; Plan view gets a "price-aware" toggle. **Decisional — plans now respect flight constraints and tiebreak by price.** |
+| v2.5 | Per-kind buckets ([`design/0011-bucket-kinds.md`](design/0011-bucket-kinds.md)). `LeaveBucket.kind: "annual" \| "sick" \| "parental" \| "conference" \| "other"` with Zod-default for transparent migration. Optimizer's default planning bucket prefers `kind: "annual"`. Calendar grid paints trips in their bucket's colour (sage / mauve / teal / amber / grey). Sessions view's "Buckets" card lists and creates them. CLI `buckets new --kind X`. We **skipped v2.0** (PDF/Markdown reports, scenario diff) per the user's call. |

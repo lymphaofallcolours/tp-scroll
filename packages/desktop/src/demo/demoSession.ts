@@ -17,6 +17,14 @@ export const buildDemoSession = (): Session => {
 
   return {
     ...base,
+    // v2.5: showcase the kinds — annual + sick + conference. Totals sum to
+    // cycle.totalDays (40) so the schema invariant holds.
+    cycle: { ...base.cycle, totalDays: 40 },
+    buckets: [
+      { id: "annual", name: "annual", cycleId: base.cycle.id, totalDays: 25, kind: "annual" },
+      { id: "sick", name: "sick days", cycleId: base.cycle.id, totalDays: 10, kind: "sick" },
+      { id: "conf", name: "conference travel", cycleId: base.cycle.id, totalDays: 5, kind: "conference" },
+    ],
     trips: [
       {
         id: "t-easter",
@@ -35,6 +43,24 @@ export const buildDemoSession = (): Session => {
         isActual: true,
         dayOverrides: [],
         notes: "Summer in Spain",
+      },
+      {
+        id: "t-confjune",
+        departure: iso("2026-06-08"),
+        return: iso("2026-06-12"),
+        bucketId: "conf",
+        isActual: true,
+        dayOverrides: [],
+        notes: "Lisbon conference",
+      },
+      {
+        id: "t-flu",
+        departure: iso("2026-02-04"),
+        return: iso("2026-02-06"),
+        bucketId: "sick",
+        isActual: true,
+        dayOverrides: [],
+        notes: "Flu",
       },
       {
         id: "t-christmas",

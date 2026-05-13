@@ -23,6 +23,20 @@
   --accent-blocked-soft: #d9b3a4;
   --accent-weekend: #c9bea2;          /* weekends look like the page itself, just darker */
 
+  /* Bucket kinds (v2.5). Annual reuses the sage already used by trip-actuals
+     so existing layouts don't shift; the others get a coordinated palette
+     that stays inside the warm-paper family. */
+  --accent-bucket-annual: #7a8e62;       /* sage (matches --accent-trip) */
+  --accent-bucket-annual-soft: #c4cdb1;
+  --accent-bucket-sick: #8a6a8d;         /* muted mauve */
+  --accent-bucket-sick-soft: #cdbbcd;
+  --accent-bucket-parental: #4f7c84;     /* deep teal */
+  --accent-bucket-parental-soft: #b7cfd2;
+  --accent-bucket-conference: #b08440;   /* warm amber */
+  --accent-bucket-conference-soft: #e1c693;
+  --accent-bucket-other: #88837a;        /* warm grey */
+  --accent-bucket-other-soft: #c8c4bc;
+
   /* Type scale */
   --font-display: "Fraunces Variable", "Fraunces", Georgia, serif;
   --font-body: "Fraunces Variable", "Fraunces", Georgia, serif;

@@ -1,3 +1,5 @@
+import { bucketKindColor, type BucketKind } from "@tp-scroll/core";
+
 import type { DayCell, MonthView } from "./calendar-data.js";
 import { MONTH_NAMES, WEEKDAY_INITIALS } from "./calendar-data.js";
 import styles from "./MonthGrid.module.css";
@@ -25,6 +27,18 @@ const countByKind = (view: MonthView): Map<DayCell["kind"], number> => {
     }
   }
   return map;
+};
+
+const tripStyleFor = (cell: DayCell): React.CSSProperties | undefined => {
+  if (cell.kind !== "trip-actual" && cell.kind !== "trip-planned") return undefined;
+  const kind: BucketKind = cell.bucketKind ?? "annual";
+  // Compose a CSS custom property reference; tokens.css holds the values.
+  const main = `var(${bucketKindColor(kind)})`;
+  const soft = `var(${bucketKindColor(kind)}-soft)`;
+  if (cell.kind === "trip-actual") {
+    return { background: main, color: "var(--surface-card)" };
+  }
+  return { background: soft, color: "var(--ink-primary)", borderColor: main };
 };
 
 export const MonthGrid = ({ view }: Props): JSX.Element => {
@@ -57,11 +71,16 @@ export const MonthGrid = ({ view }: Props): JSX.Element => {
               return <div key={`b-${wIdx}-${dIdx}`} className={`${styles.cell} ${styles.cellBlank}`} />;
             }
             const cls = cellClassFor[cell.kind];
+            const style = tripStyleFor(cell);
+            const title = cell.bucketKind
+              ? `${cell.date.toString()} — ${cell.kind} · ${cell.bucketKind}`
+              : `${cell.date.toString()} — ${cell.kind}`;
             return (
               <div
                 key={`c-${wIdx}-${dIdx}`}
                 className={`${styles.cell} ${cls}`}
-                title={`${cell.date.toString()} — ${cell.kind}`}
+                {...(style !== undefined ? { style } : {})}
+                title={title}
               >
                 {cell.date.day}
               </div>

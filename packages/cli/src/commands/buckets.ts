@@ -1,3 +1,4 @@
+import { BucketKindSchema, type BucketKind } from "@tp-scroll/core";
 import type { Command } from "commander";
 
 import type { CliDeps } from "../main.js";
@@ -13,35 +14,37 @@ export const registerBucketsCommands = (program: Command, deps: CliDeps): void =
     .requiredOption("--id <id>", "Bucket id (e.g. sick, parental)")
     .requiredOption("--name <name>", "Display name")
     .requiredOption("--total-days <n>", "Days allocated to this bucket")
-    .action(async (opts: { id: string; name: string; totalDays: string }) => {
-      const session = await requireActiveSession(deps);
-      if (session.buckets.some((b) => b.id === opts.id)) {
-        throw new Error(`bucket already exists: ${opts.id}`);
-      }
-      const newBucket = {
-        id: opts.id,
-        name: opts.name,
-        cycleId: session.cycle.id,
-        totalDays: Number(opts.totalDays),
-      };
-      await saveAndTouch(deps, {
-        ...session,
-        buckets: [...session.buckets, newBucket],
-      });
-      deps.stdout(`Added bucket ${opts.id} (${opts.name}) with ${opts.totalDays} days`);
-    });
+    .option("--kind <kind>", "annual | sick | parental | conference | other", "annual")
+    .action(
+      async (opts: { id: string; name: string; totalDays: string; kind?: string }) => {
+        const session = await requireActiveSession(deps);
+        if (session.buckets.some((b) => b.id === opts.id)) {
+          throw new Error(`bucket already exists: ${opts.id}`);
+        }
+        const parsedKind: BucketKind = BucketKindSchema.parse(opts.kind ?? "annual");
+        const newBucket = {
+          id: opts.id,
+          name: opts.name,
+          cycleId: session.cycle.id,
+          totalDays: Number(opts.totalDays),
+          kind: parsedKind,
+        };
+        await saveAndTouch(deps, {
+          ...session,
+          buckets: [...session.buckets, newBucket],
+        });
+        deps.stdout(
+          `Added bucket ${opts.id} (${opts.name}, ${parsedKind}) with ${opts.totalDays} days`,
+        );
+      },
+    );
 
   buckets
     .command("list")
     .description("List all buckets and their per-bucket consumption")
     .action(async () => {
       const session = await requireActiveSession(deps);
-      const rows = session.buckets.map((b) => [
-        b.id,
-        b.name,
-        String(b.totalDays),
-        b.cycleId,
-      ]);
-      deps.stdout(renderTable(["id", "name", "total", "cycle"], rows));
+      const rows = session.buckets.map((b) => [b.id, b.name, b.kind, String(b.totalDays), b.cycleId]);
+      deps.stdout(renderTable(["id", "name", "kind", "total", "cycle"], rows));
     });
 };

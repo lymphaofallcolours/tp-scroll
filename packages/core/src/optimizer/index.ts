@@ -71,7 +71,12 @@ const annotateCandidates = (
 export const optimize = (session: Session, options: OptimizeOptions): TripPlan[] => {
   const range = options.range ?? { start: session.cycle.start, end: session.cycle.end };
 
-  const planningBucketId = options.planningBucketId ?? session.buckets[0]?.id;
+  // Default planning bucket prefers kind="annual"; falls back to the first
+  // bucket of any kind. v2.5 introduced kinds so users can keep sick/parental
+  // buckets ahead of annual without breaking the planning flow.
+  const defaultPlanningBucket =
+    session.buckets.find((b) => b.kind === "annual") ?? session.buckets[0];
+  const planningBucketId = options.planningBucketId ?? defaultPlanningBucket?.id;
   if (planningBucketId === undefined) {
     throw new Error("Session must have at least one bucket");
   }

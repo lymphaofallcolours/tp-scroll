@@ -3,6 +3,7 @@ import {
   defaultSession,
   fromDayInt,
   rollCycle,
+  type BucketKind,
   type FlightConstraints,
   type LeaveBucket,
   type LeaveCycle,
@@ -43,6 +44,12 @@ type SessionState = {
     totalDays: number;
   }) => Promise<void>;
   readonly setFlightConstraints: (constraints: FlightConstraints | null) => Promise<void>;
+  readonly addBucket: (input: {
+    id: string;
+    name: string;
+    totalDays: number;
+    kind: BucketKind;
+  }) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -201,6 +208,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         name: "annual",
         cycleId: newCycle.id,
         totalDays,
+        kind: "annual",
       },
     ];
     const rolled = rollCycle(s, newCycle, newBuckets);
@@ -218,6 +226,29 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         ? { ...s, flightConstraints: undefined }
         : { ...s, flightConstraints: constraints },
     );
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  addBucket: async (input) => {
+    const s = get().session;
+    if (!s) return;
+    if (s.buckets.some((b) => b.id === input.id)) {
+      throw new Error(`bucket already exists: ${input.id}`);
+    }
+    const next = touch({
+      ...s,
+      buckets: [
+        ...s.buckets,
+        {
+          id: input.id,
+          name: input.name,
+          cycleId: s.cycle.id,
+          totalDays: input.totalDays,
+          kind: input.kind,
+        },
+      ],
+    });
     set({ session: next });
     await persist(next, get().isDemo);
   },

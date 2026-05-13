@@ -71,6 +71,7 @@ export const registerCycleCommands = (program: Command, deps: CliDeps): void => 
           name: "annual",
           cycleId: opts.id,
           totalDays: Number(opts.totalDays),
+          kind: "annual",
         },
       ];
       const rolled = rollCycle(session, newCycle, newBuckets);

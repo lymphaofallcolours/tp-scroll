@@ -1,13 +1,24 @@
 import { useState } from "react";
 import {
+  bucketKindColor,
   dayIntFromIso,
   fromDayInt,
   isoFromDayInt,
+  type BucketKind,
   type FlightConstraints,
+  type Session,
 } from "@tp-scroll/core";
 
 import { useSessionStore } from "../../state/session.js";
 import styles from "./Sessions.module.css";
+
+const BUCKET_KINDS: ReadonlyArray<BucketKind> = [
+  "annual",
+  "sick",
+  "parental",
+  "conference",
+  "other",
+];
 
 export const Sessions = (): JSX.Element | null => {
   const session = useSessionStore((s) => s.session);
@@ -18,6 +29,7 @@ export const Sessions = (): JSX.Element | null => {
   const deleteSession = useSessionStore((s) => s.deleteSession);
   const rollActiveCycle = useSessionStore((s) => s.rollActiveCycle);
   const setFlightConstraints = useSessionStore((s) => s.setFlightConstraints);
+  const addBucket = useSessionStore((s) => s.addBucket);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -181,6 +193,13 @@ export const Sessions = (): JSX.Element | null => {
               onSave={async (next) => setFlightConstraints(next)}
             />
           )}
+
+          {session && (
+            <BucketsCard
+              session={session}
+              onAdd={async (input) => addBucket(input)}
+            />
+          )}
         </section>
 
         <section className={styles.column}>
@@ -226,6 +245,193 @@ export const Sessions = (): JSX.Element | null => {
         </section>
       </div>
     </main>
+  );
+};
+
+const BucketsCard = ({
+  session,
+  onAdd,
+}: {
+  session: Session;
+  onAdd: (input: { id: string; name: string; totalDays: number; kind: BucketKind }) => Promise<void>;
+}): JSX.Element => {
+  const [showForm, setShowForm] = useState(false);
+  const [bId, setBId] = useState("");
+  const [bName, setBName] = useState("");
+  const [bDays, setBDays] = useState("");
+  const [bKind, setBKind] = useState<BucketKind>("sick");
+  const [error, setError] = useState<string | null>(null);
+
+  const onSubmit = async (): Promise<void> => {
+    setError(null);
+    if (bId.trim().length === 0 || bName.trim().length === 0) {
+      setError("id and name are required");
+      return;
+    }
+    const days = Number(bDays);
+    if (!Number.isFinite(days) || days < 0) {
+      setError("totalDays must be a non-negative number");
+      return;
+    }
+    try {
+      await onAdd({ id: bId.trim(), name: bName.trim(), totalDays: days, kind: bKind });
+      setBId("");
+      setBName("");
+      setBDays("");
+      setShowForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const totals = session.buckets.reduce((s, b) => s + b.totalDays, 0);
+  const cycleTotal = session.cycle.totalDays;
+  const balanced = totals === cycleTotal;
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>Buckets</h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Each bucket has a kind so the optimizer can default to "annual" and the
+        UI can colour-code your time off. Totals must add up to your cycle's
+        <strong> {cycleTotal} days</strong>.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        {session.buckets.map((b) => {
+          const color = `var(${bucketKindColor(b.kind)})`;
+          return (
+            <div
+              key={b.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto 1fr auto auto",
+                gap: "var(--space-3)",
+                alignItems: "center",
+                padding: "var(--space-2) var(--space-3)",
+                background: "var(--surface-page)",
+                border: "1px solid var(--surface-edge)",
+                borderRadius: "var(--radius-cell)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--type-mono)",
+              }}
+            >
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 2,
+                  background: color,
+                  display: "inline-block",
+                }}
+              />
+              <span>{b.name} <span style={{ color: "var(--ink-tertiary)" }}>({b.id})</span></span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--type-mono-sm)",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-secondary)",
+                  padding: "2px 6px",
+                  background: `var(${bucketKindColor(b.kind)}-soft)`,
+                  borderRadius: 2,
+                }}
+              >
+                {b.kind}
+              </span>
+              <span style={{ color: "var(--ink-primary)", fontFeatureSettings: "'tnum' 1" }}>
+                {b.totalDays}d
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p
+        className={styles.cycleSummary}
+        style={{ borderTop: "1px solid var(--surface-edge)", paddingTop: "var(--space-3)", marginTop: "var(--space-3)", marginBottom: "var(--space-3)", borderBottom: "none", paddingBottom: 0 }}
+      >
+        sum&nbsp;
+        <strong style={{ color: balanced ? "var(--accent-trip)" : "var(--accent-blocked)" }}>
+          {totals}d
+        </strong>
+        &nbsp;/&nbsp;<strong>{cycleTotal}d</strong>
+        {balanced ? " ✓" : " — sum must equal cycle total to save"}
+      </p>
+      {!showForm ? (
+        <button type="button" className={styles.linkBtn} onClick={() => setShowForm(true)}>
+          + add bucket
+        </button>
+      ) : (
+        <>
+          <div className={styles.fieldRow}>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Id</span>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="e.g. sick"
+                value={bId}
+                onChange={(e) => setBId(e.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Display name</span>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="e.g. Sick days"
+                value={bName}
+                onChange={(e) => setBName(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className={styles.fieldRow}>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Total days</span>
+              <input
+                type="number"
+                className={styles.input}
+                min={0}
+                placeholder="e.g. 10"
+                value={bDays}
+                onChange={(e) => setBDays(e.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Kind</span>
+              <select
+                className={styles.input}
+                value={bKind}
+                onChange={(e) => setBKind(e.target.value as BucketKind)}
+              >
+                {BUCKET_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-3)" }}>
+            <button type="button" className={styles.primaryBtn} onClick={() => void onSubmit()}>
+              Add bucket
+            </button>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => {
+                setShowForm(false);
+                setError(null);
+              }}
+              style={{ alignSelf: "center" }}
+            >
+              cancel
+            </button>
+          </div>
+          {error && <p className={styles.error}>{error}</p>}
+        </>
+      )}
+    </div>
   );
 };
 
