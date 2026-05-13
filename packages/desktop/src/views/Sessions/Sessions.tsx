@@ -249,7 +249,10 @@ export const Sessions = (): JSX.Element | null => {
             </div>
             <div className={styles.fieldRow}>
               <div className={styles.field}>
-                <span className={styles.fieldLabel}>Residence</span>
+                <span className={styles.fieldLabel}>
+                  Residence
+                  <Hint text="ISO-3166 alpha-2 code of the country where you currently live and work. This is where your annual-leave contract is, where weekends/public holidays apply, and where trips depart FROM." />
+                </span>
                 <input
                   type="text"
                   className={styles.input}
@@ -259,7 +262,10 @@ export const Sessions = (): JSX.Element | null => {
                 />
               </div>
               <div className={styles.field}>
-                <span className={styles.fieldLabel}>Home</span>
+                <span className={styles.fieldLabel}>
+                  Home
+                  <Hint text="ISO-3166 alpha-2 code of the country you go HOME to — where your family/origin is. The optimizer's whole purpose is to maximise time here. Its public holidays appear as a teal corner marker on the calendar." />
+                </span>
                 <input
                   type="text"
                   className={styles.input}

@@ -56,7 +56,9 @@ export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.E
         <div className={styles.sessionMeta}>
           <div className={styles.sessionName}>{session.name}</div>
           <div className={styles.sessionRoute}>
-            <em>{session.residenceCountry}</em> &nbsp;→&nbsp; <em>{session.homeCountry}</em>
+            <em title="Residence (where you live and work)">{session.residenceCountry}</em>
+            &nbsp;→&nbsp;
+            <em title="Home (the country you're trying to spend more time in)">{session.homeCountry}</em>
             <br />
             cycle&nbsp;{cycleYear}
           </div>
