@@ -9,12 +9,15 @@ import {
 } from "@tp-scroll/core";
 import type { Holiday } from "@tp-scroll/adapter-holidays";
 
+import type { TripPrefill } from "../../state/ui.js";
+
 import { DayOverridesEditor } from "./DayOverridesEditor.js";
 import styles from "./Trips.module.css";
 
 type Props = {
   readonly session: Session;
   readonly initial: Trip | null; // null = new
+  readonly prefill?: TripPrefill | null;
   readonly isDemo: boolean;
   readonly holidays: ReadonlyArray<Holiday>;
   readonly onSubmit: (trip: Trip) => Promise<void> | void;
@@ -32,22 +35,29 @@ const cryptoId = (): string => {
 export const TripForm = ({
   session,
   initial,
+  prefill,
   isDemo,
   holidays,
   onSubmit,
   onCancel,
   onDelete,
 }: Props): JSX.Element => {
-  const [from, setFrom] = useState(initial ? isoFromDayInt(initial.departure) : "");
-  const [to, setTo] = useState(initial ? isoFromDayInt(initial.return) : "");
-  const [isActual, setIsActual] = useState(initial?.isActual ?? true);
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [bucketId, setBucketId] = useState(
-    initial?.bucketId ?? session.buckets[0]?.id ?? "annual",
-  );
-  const [overrides, setOverrides] = useState<ReadonlyArray<DayAttribution>>(
-    initial?.dayOverrides ?? [],
-  );
+  // `initial` (editing an existing trip) takes priority over `prefill` (handed
+  // off from the Plan view). When neither is set, all fields start empty/default.
+  const seedDeparture = initial?.departure ?? prefill?.departure ?? null;
+  const seedReturn = initial?.return ?? prefill?.return ?? null;
+  const seedIsActual = initial?.isActual ?? prefill?.isActual ?? true;
+  const seedNotes = initial?.notes ?? prefill?.notes ?? "";
+  const seedBucketId =
+    initial?.bucketId ?? prefill?.bucketId ?? session.buckets[0]?.id ?? "annual";
+  const seedOverrides = initial?.dayOverrides ?? prefill?.dayOverrides ?? [];
+
+  const [from, setFrom] = useState(seedDeparture !== null ? isoFromDayInt(seedDeparture) : "");
+  const [to, setTo] = useState(seedReturn !== null ? isoFromDayInt(seedReturn) : "");
+  const [isActual, setIsActual] = useState(seedIsActual);
+  const [notes, setNotes] = useState(seedNotes);
+  const [bucketId, setBucketId] = useState(seedBucketId);
+  const [overrides, setOverrides] = useState<ReadonlyArray<DayAttribution>>(seedOverrides);
 
   const parsedFrom = useMemo(() => safeIso(from), [from]);
   const parsedTo = useMemo(() => safeIso(to), [to]);

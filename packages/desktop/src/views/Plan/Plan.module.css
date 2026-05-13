@@ -242,9 +242,40 @@
 
 .tripLine {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
+  grid-template-columns: 14px 1fr auto auto;
   gap: var(--space-3);
   align-items: center;
+}
+
+.tripLineClickable {
+  background: transparent;
+  border: none;
+  padding: var(--space-2) var(--space-3);
+  margin: 0 calc(var(--space-3) * -1);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-cell);
+  transition: background var(--duration-fast) var(--ease-quiet);
+}
+
+.tripLineClickable:hover {
+  background: var(--surface-sunk);
+}
+
+.tripLineClickable:hover .tripAdd {
+  opacity: 1;
+}
+
+.tripAdd {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-trip);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-quiet);
 }
 
 .tripDot {

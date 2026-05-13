@@ -8,6 +8,7 @@ import {
   passesFlightConstraints,
   scorePlan,
   type CandidateFlightInfo,
+  type Trip,
   type TripPlan,
 } from "@tp-scroll/core";
 import { legInfoOf, type AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
@@ -15,6 +16,7 @@ import { legInfoOf, type AnnotatedTripPlan } from "@tp-scroll/adapter-flights";
 import { bridge } from "../../api/bridge.js";
 import { Hint } from "../../components/Hint.js";
 import { useSessionStore } from "../../state/session.js";
+import { useUiStore } from "../../state/ui.js";
 import styles from "./Plan.module.css";
 
 type RunState =
@@ -28,6 +30,8 @@ type FlightFetchState = "idle" | "fetching" | "done" | "error";
 export const Plan = (): JSX.Element | null => {
   const session = useSessionStore((s) => s.session);
   const holidays = useSessionStore((s) => s.holidays);
+  const setView = useUiStore((s) => s.setView);
+  const openTripEditor = useUiStore((s) => s.openTripEditor);
 
   const [topK, setTopK] = useState(5);
   const [diverse, setDiverse] = useState(true);
@@ -285,6 +289,18 @@ export const Plan = (): JSX.Element | null => {
                     rank={i + 1}
                     annotated={originalIdx >= 0 ? annotated?.[originalIdx] ?? null : null}
                     isMockFlights={isMockFlights}
+                    onPickTrip={(trip) => {
+                      // Hand the trip off to the Trips form and switch tabs.
+                      // isActual=false keeps it as a candidate the user can
+                      // review/edit before committing.
+                      openTripEditor("new", {
+                        departure: trip.departure,
+                        return: trip.return,
+                        bucketId: trip.bucketId,
+                        isActual: false,
+                      });
+                      setView("trips");
+                    }}
                   />
                 );
               })
@@ -301,11 +317,13 @@ const PlanCard = ({
   rank,
   annotated,
   isMockFlights,
+  onPickTrip,
 }: {
   plan: TripPlan;
   rank: number;
   annotated: AnnotatedTripPlan | null;
   isMockFlights: boolean;
+  onPickTrip: (trip: Trip) => void;
 }): JSX.Element => {
   const score = scorePlan(plan);
   const leverage = score[1] === Number.POSITIVE_INFINITY ? "∞" : (score[1] / 10000).toFixed(2);
@@ -362,7 +380,13 @@ const PlanCard = ({
             sorted.map(({ trip, annotation }, i) => {
               const days = trip.return - trip.departure + 1;
               return (
-                <div key={i} className={styles.tripLine}>
+                <button
+                  key={i}
+                  type="button"
+                  className={`${styles.tripLine} ${styles.tripLineClickable}`}
+                  onClick={() => onPickTrip(trip)}
+                  title="Click to add this trip — opens the Trips form pre-filled"
+                >
                   <span className={styles.tripDot} />
                   <span className={styles.tripDates}>
                     {isoFromDayInt(trip.departure)} → {isoFromDayInt(trip.return)}
@@ -380,7 +404,8 @@ const PlanCard = ({
                       </>
                     )}
                   </span>
-                </div>
+                  <span className={styles.tripAdd}>+ add as planned</span>
+                </button>
               );
             })
           )}

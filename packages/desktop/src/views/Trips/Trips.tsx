@@ -17,6 +17,7 @@ export const Trips = (): JSX.Element | null => {
   const deleteTrip = useSessionStore((s) => s.deleteTrip);
 
   const tripBeingEdited = useUiStore((s) => s.tripBeingEdited);
+  const tripPrefill = useUiStore((s) => s.tripPrefill);
   const openTripEditor = useUiStore((s) => s.openTripEditor);
   const closeTripEditor = useUiStore((s) => s.closeTripEditor);
 
@@ -85,6 +86,7 @@ export const Trips = (): JSX.Element | null => {
             <TripForm
               session={session}
               initial={editingTrip}
+              prefill={tripPrefill}
               isDemo={isDemo}
               holidays={holidays}
               onSubmit={async (trip) => {
