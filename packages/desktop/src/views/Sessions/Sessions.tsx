@@ -4,6 +4,7 @@ import {
   dayIntFromIso,
   fromDayInt,
   isoFromDayInt,
+  type BlockedPeriod,
   type BucketKind,
   type FlightConstraints,
   type Session,
@@ -42,6 +43,8 @@ export const Sessions = (): JSX.Element | null => {
   const setFlightConstraints = useSessionStore((s) => s.setFlightConstraints);
   const addBucket = useSessionStore((s) => s.addBucket);
   const setTripBounds = useSessionStore((s) => s.setTripBounds);
+  const addBlocked = useSessionStore((s) => s.addBlocked);
+  const deleteBlocked = useSessionStore((s) => s.deleteBlocked);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -220,6 +223,14 @@ export const Sessions = (): JSX.Element | null => {
             />
           )}
 
+          {session && (
+            <HomePeriodsCard
+              session={session}
+              onAdd={async (input) => addBlocked(input)}
+              onDelete={async (start, end) => deleteBlocked(start, end)}
+            />
+          )}
+
           <AmadeusCredentialsCard />
         </section>
 
@@ -266,6 +277,129 @@ export const Sessions = (): JSX.Element | null => {
         </section>
       </div>
     </main>
+  );
+};
+
+const HomePeriodsCard = ({
+  session,
+  onAdd,
+  onDelete,
+}: {
+  session: Session;
+  onAdd: (input: BlockedPeriod) => Promise<void>;
+  onDelete: (start: number, end: number) => Promise<void>;
+}): JSX.Element => {
+  const cycleStartIso = isoFromDayInt(session.cycle.start);
+  const cycleEndIso = isoFromDayInt(session.cycle.end);
+
+  const [fromIso, setFromIso] = useState(cycleStartIso);
+  const [toIso, setToIso] = useState(cycleStartIso);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const onAddClick = async (): Promise<void> => {
+    setError(null);
+    if (reason.trim().length === 0) {
+      setError("give it a short label so you remember why");
+      return;
+    }
+    try {
+      await onAdd({
+        start: dayIntFromIso(fromIso),
+        end: dayIntFromIso(toIso),
+        reason: reason.trim(),
+      });
+      setReason("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const sorted = [...session.blocked].sort((a, b) => a.start - b.start);
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>
+        Mandatory home periods
+        <Hint text="Days you've already committed to being home — family events, exams, blocked-by-teaching weeks. The optimizer will not plan any trip that overlaps these periods, but the days still count as home days in the score." />
+      </h2>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Cycle <strong>{cycleStartIso} → {cycleEndIso}</strong>. Add a range you know you'll be home for.
+      </p>
+
+      {sorted.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {sorted.map((b) => (
+            <div
+              key={`${b.start}-${b.end}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: "var(--space-3)",
+                alignItems: "center",
+                padding: "var(--space-2) var(--space-3)",
+                background: "var(--surface-page)",
+                border: "1px solid var(--surface-edge)",
+                borderRadius: "var(--radius-cell)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--type-mono)",
+              }}
+            >
+              <span style={{ color: "var(--ink-primary)" }}>{b.reason}</span>
+              <span style={{ color: "var(--ink-tertiary)", fontFeatureSettings: "'tnum' 1" }}>
+                {isoFromDayInt(b.start)} → {isoFromDayInt(b.end)} · {b.end - b.start + 1}d
+              </span>
+              <button
+                type="button"
+                className={`${styles.linkBtn} ${styles.danger}`}
+                onClick={() => void onDelete(b.start, b.end)}
+              >
+                delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>From</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={fromIso}
+            min={cycleStartIso}
+            max={cycleEndIso}
+            onChange={(e) => setFromIso(e.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>To</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={toIso}
+            min={cycleStartIso}
+            max={cycleEndIso}
+            onChange={(e) => setToIso(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>Why</span>
+        <input
+          type="text"
+          className={styles.input}
+          value={reason}
+          placeholder="e.g. winter break at home"
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </div>
+      <button type="button" className={styles.primaryBtn} onClick={() => void onAddClick()}>
+        Add period
+      </button>
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
   );
 };
 

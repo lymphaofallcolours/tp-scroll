@@ -3,6 +3,7 @@ import {
   defaultSession,
   fromDayInt,
   rollCycle,
+  type BlockedPeriod,
   type BucketKind,
   type FlightConstraints,
   type LeaveBucket,
@@ -57,6 +58,8 @@ type SessionState = {
     minGapDays: number;
     maxGapDays: number;
   }) => Promise<void>;
+  readonly addBlocked: (input: BlockedPeriod) => Promise<void>;
+  readonly deleteBlocked: (start: number, end: number) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -282,6 +285,31 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           kind: input.kind,
         },
       ],
+    });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  addBlocked: async (input) => {
+    const s = get().session;
+    if (!s) return;
+    if (input.end < input.start) {
+      throw new Error("end must be >= start");
+    }
+    if (s.blocked.some((b) => b.start === input.start && b.end === input.end)) {
+      throw new Error("a period with the same start/end already exists");
+    }
+    const next = touch({ ...s, blocked: [...s.blocked, input] });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  deleteBlocked: async (start, end) => {
+    const s = get().session;
+    if (!s) return;
+    const next = touch({
+      ...s,
+      blocked: s.blocked.filter((b) => !(b.start === start && b.end === end)),
     });
     set({ session: next });
     await persist(next, get().isDemo);
