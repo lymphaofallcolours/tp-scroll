@@ -34,7 +34,7 @@ const defaultRuleFor = (
   const isResWeekend = isWeekend(day, session.residenceCountry);
   const isHoliday = holidays.has(day);
   const consumesLeave = (() => {
-    if (isHoliday) return false;
+    if (isHoliday && !session.cycle.countHolidays) return false;
     if (isResWeekend && !session.cycle.countWeekends) return false;
     return true;
   })();

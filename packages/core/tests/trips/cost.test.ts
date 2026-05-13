@@ -55,6 +55,18 @@ describe("computeTripCost", () => {
     expect(cost.leaveCost).toBe(4);
   });
 
+  it("counts public holidays when countHolidays=true (cycle override)", () => {
+    const session = makeSession({
+      cycle: { ...makeSession().cycle, countHolidays: true },
+    });
+    const trip = makeTrip({ departure: dep, return: ret });
+    const holiday = d("2026-05-13"); // Wednesday
+    const cost = computeTripCost(trip, session, new Set([holiday]));
+    // Without countHolidays, Wed would be 0. With it, Wed counts as a regular
+    // leave day → leave = 5 (Mon-Fri, all charged).
+    expect(cost.leaveCost).toBe(5);
+  });
+
   it("counts every day when countWeekends=true (cycle override)", () => {
     const session = makeSession({
       cycle: { ...makeSession().cycle, countWeekends: true },

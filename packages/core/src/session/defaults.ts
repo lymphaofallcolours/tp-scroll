@@ -29,6 +29,7 @@ export const defaultSession = (seed: SessionSeed): Session => {
       bufferAtEnd: 0,
       halfDaysAllowed: false,
       countWeekends: false,
+      countHolidays: false,
     },
     buckets: [
       {

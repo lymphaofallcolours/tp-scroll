@@ -6,6 +6,7 @@ import {
   isoFromDayInt,
   type BlockedPeriod,
   type BucketKind,
+  type DepartureMode,
   type FlightConstraints,
   type RegionOverride,
   type Session,
@@ -48,6 +49,8 @@ export const Sessions = (): JSX.Element | null => {
   const deleteBlocked = useSessionStore((s) => s.deleteBlocked);
   const addRegion = useSessionStore((s) => s.addRegion);
   const deleteRegion = useSessionStore((s) => s.deleteRegion);
+  const setCycleRules = useSessionStore((s) => s.setCycleRules);
+  const setDepartureMode = useSessionStore((s) => s.setDepartureMode);
 
   const [createName, setCreateName] = useState("");
   const [createResidence, setCreateResidence] = useState("DE");
@@ -157,92 +160,99 @@ export const Sessions = (): JSX.Element | null => {
             </div>
           )}
 
-          {session && !isDemo && (
-            <div className={styles.card}>
-              <h2 className={styles.columnTitle}>Roll the cycle</h2>
-              <p className={styles.cycleSummary}>
-                Active cycle: <strong>{cycleStartIso} → {cycleEndIso}</strong>
-                {" · "}
-                <strong>{session.cycle.totalDays}d</strong>
-                {" · "}
-                carryover&nbsp;
-                <strong>{session.cycle.carryover.mode}</strong>
-              </p>
-              <div className={styles.fieldRow}>
-                <div className={styles.field}>
-                  <span className={styles.fieldLabel}>New start</span>
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={rollFrom}
-                    onChange={(e) => setRollFrom(e.target.value)}
-                  />
+          {session && (
+            <>
+              <SectionHeader title="Cycle rules" subtitle="how leave is counted across the active cycle" />
+              {!isDemo && (
+                <div className={styles.card}>
+                  <h2 className={styles.columnTitle}>Roll the cycle</h2>
+                  <p className={styles.cycleSummary}>
+                    Active cycle: <strong>{cycleStartIso} → {cycleEndIso}</strong>
+                    {" · "}
+                    <strong>{session.cycle.totalDays}d</strong>
+                    {" · "}
+                    carryover&nbsp;
+                    <strong>{session.cycle.carryover.mode}</strong>
+                  </p>
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>New start</span>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={rollFrom}
+                        onChange={(e) => setRollFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>New end</span>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={rollTo}
+                        onChange={(e) => setRollTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Total days for the new cycle</span>
+                    <input
+                      type="number"
+                      className={styles.input}
+                      min={0}
+                      value={rollDays}
+                      onChange={(e) => setRollDays(Number(e.target.value))}
+                    />
+                  </div>
+                  <button type="button" className={styles.primaryBtn} onClick={() => void onRoll()}>
+                    Roll cycle
+                  </button>
+                  {rollError && <p className={styles.error}>{rollError}</p>}
                 </div>
-                <div className={styles.field}>
-                  <span className={styles.fieldLabel}>New end</span>
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={rollTo}
-                    onChange={(e) => setRollTo(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className={styles.field}>
-                <span className={styles.fieldLabel}>Total days for the new cycle</span>
-                <input
-                  type="number"
-                  className={styles.input}
-                  min={0}
-                  value={rollDays}
-                  onChange={(e) => setRollDays(Number(e.target.value))}
-                />
-              </div>
-              <button type="button" className={styles.primaryBtn} onClick={() => void onRoll()}>
-                Roll cycle
-              </button>
-              {rollError && <p className={styles.error}>{rollError}</p>}
-            </div>
-          )}
+              )}
 
-          {session && (
-            <FlightConstraintsCard
-              constraints={session.flightConstraints ?? null}
-              onSave={async (next) => setFlightConstraints(next)}
-            />
-          )}
+              <CycleRulesCard
+                session={session}
+                onSetRules={async (patch) => setCycleRules(patch)}
+                onSetDepartureMode={async (mode) => setDepartureMode(mode)}
+              />
 
-          {session && (
-            <BucketsCard
-              session={session}
-              onAdd={async (input) => addBucket(input)}
-            />
-          )}
+              <BucketsCard
+                session={session}
+                onAdd={async (input) => addBucket(input)}
+              />
 
-          {session && (
-            <TripBoundsCard
-              session={session}
-              onSave={async (input) => setTripBounds(input)}
-            />
-          )}
+              <SectionHeader title="Trip rules" subtitle="what the optimizer is allowed to suggest" />
 
-          {session && (
-            <HomePeriodsCard
-              session={session}
-              onAdd={async (input) => addBlocked(input)}
-              onDelete={async (start, end) => deleteBlocked(start, end)}
-            />
-          )}
+              <TripBoundsCard
+                session={session}
+                onSave={async (input) => setTripBounds(input)}
+              />
 
-          {session && (
-            <RegionOverridesCard
-              session={session}
-              onAdd={async (input) => addRegion(input)}
-              onDelete={async (id) => deleteRegion(id)}
-            />
-          )}
+              <RegionOverridesCard
+                session={session}
+                onAdd={async (input) => addRegion(input)}
+                onDelete={async (id) => deleteRegion(id)}
+              />
 
-          <AmadeusCredentialsCard />
+              <SectionHeader title="Constraints" subtitle="things that always apply" />
+
+              <HomePeriodsCard
+                session={session}
+                onAdd={async (input) => addBlocked(input)}
+                onDelete={async (start, end) => deleteBlocked(start, end)}
+              />
+
+              <FlightConstraintsCard
+                constraints={session.flightConstraints ?? null}
+                onSave={async (next) => setFlightConstraints(next)}
+              />
+
+              <SectionHeader title="Data" subtitle="external providers, stored locally" />
+
+              <AmadeusCredentialsCard />
+            </>
+          )}
         </section>
 
         <section className={styles.column}>
@@ -294,6 +304,189 @@ export const Sessions = (): JSX.Element | null => {
         </section>
       </div>
     </main>
+  );
+};
+
+const SectionHeader = ({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}): JSX.Element => (
+  <div className={styles.sectionHeader}>
+    <span className={styles.sectionHeaderTitle}>{title}</span>
+    <span className={styles.sectionHeaderSubtitle}>{subtitle}</span>
+  </div>
+);
+
+const CycleRulesCard = ({
+  session,
+  onSetRules,
+  onSetDepartureMode,
+}: {
+  session: Session;
+  onSetRules: (patch: {
+    countWeekends?: boolean;
+    countHolidays?: boolean;
+    halfDaysAllowed?: boolean;
+    bufferAtEnd?: number;
+    carryover?: Session["cycle"]["carryover"];
+  }) => Promise<void>;
+  onSetDepartureMode: (mode: DepartureMode) => Promise<void>;
+}): JSX.Element => {
+  const { cycle, departureMode } = session;
+  const [buffer, setBuffer] = useState(String(cycle.bufferAtEnd));
+  const [carryMax, setCarryMax] = useState(
+    cycle.carryover.mode === "cumulative" ? String(cycle.carryover.maxDays) : "5",
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const handle = async (fn: () => Promise<void>): Promise<void> => {
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.columnTitle}>
+        Cycle rules
+        <Hint text="How leave consumption is counted day-by-day. Toggles take effect immediately for both the calendar view and the optimizer." />
+      </h2>
+
+      <label className={styles.toggleRow}>
+        <input
+          type="checkbox"
+          checked={cycle.countWeekends}
+          onChange={(e) => void handle(() => onSetRules({ countWeekends: e.target.checked }))}
+        />
+        <span>
+          Count weekends as leave
+          <Hint text="When on, Saturday/Sunday within a trip consume a leave-day. Most users keep this OFF — weekends are free." />
+        </span>
+      </label>
+
+      <label className={styles.toggleRow}>
+        <input
+          type="checkbox"
+          checked={cycle.countHolidays}
+          onChange={(e) => void handle(() => onSetRules({ countHolidays: e.target.checked }))}
+        />
+        <span>
+          Count public holidays as leave
+          <Hint text="When on, residence-country public holidays inside a trip consume a leave-day. OFF (default) means holidays are free." />
+        </span>
+      </label>
+
+      <label className={styles.toggleRow}>
+        <input
+          type="checkbox"
+          checked={cycle.halfDaysAllowed}
+          onChange={(e) => void handle(() => onSetRules({ halfDaysAllowed: e.target.checked }))}
+        />
+        <span>
+          Half-days allowed
+          <Hint text="Enables the 'half day' override in the trip editor — charge 0.5 instead of 1 for a specific day. Useful when your employer supports half-day vacation." />
+        </span>
+      </label>
+
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Departure mode
+            <Hint text="last-home-day: departure day is your last day at residence (an evening flight). first-away-day: departure day starts at the destination. Affects Schengen day-counting but not leave accounting." />
+          </span>
+          <select
+            className={styles.input}
+            value={departureMode}
+            onChange={(e) => void handle(() => onSetDepartureMode(e.target.value as DepartureMode))}
+          >
+            <option value="last-home-day">last-home-day</option>
+            <option value="first-away-day">first-away-day</option>
+          </select>
+        </div>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Buffer at end (days)
+            <Hint text="Days reserved at the end of the cycle that the optimizer cannot plan into. Keeps a tail of leave-days unspent for emergencies." />
+          </span>
+          <input
+            type="number"
+            className={styles.input}
+            min={0}
+            max={cycle.totalDays}
+            value={buffer}
+            onChange={(e) => setBuffer(e.target.value)}
+            onBlur={() => {
+              const n = Number(buffer);
+              if (Number.isFinite(n) && n >= 0 && n !== cycle.bufferAtEnd) {
+                void handle(() => onSetRules({ bufferAtEnd: Math.floor(n) }));
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <div className={styles.fieldRow}>
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Carryover mode
+            <Hint text="What happens to unused leave at cycle end. lose: forfeit. cumulative: roll over up to maxDays into the next cycle." />
+          </span>
+          <select
+            className={styles.input}
+            value={cycle.carryover.mode}
+            onChange={(e) => {
+              const mode = e.target.value as "lose" | "cumulative";
+              const carryover =
+                mode === "cumulative"
+                  ? { mode: "cumulative" as const, maxDays: Number(carryMax) || 0 }
+                  : { mode: "lose" as const };
+              void handle(() => onSetRules({ carryover }));
+            }}
+          >
+            <option value="lose">lose</option>
+            <option value="cumulative">cumulative</option>
+          </select>
+        </div>
+        {cycle.carryover.mode === "cumulative" && (
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>
+              Max carryover (days)
+              <Hint text="Cap on how many unused days carry into the next cycle." />
+            </span>
+            <input
+              type="number"
+              className={styles.input}
+              min={0}
+              value={carryMax}
+              onChange={(e) => setCarryMax(e.target.value)}
+              onBlur={() => {
+                const n = Number(carryMax);
+                if (
+                  Number.isFinite(n) &&
+                  n >= 0 &&
+                  cycle.carryover.mode === "cumulative" &&
+                  n !== cycle.carryover.maxDays
+                ) {
+                  void handle(() =>
+                    onSetRules({
+                      carryover: { mode: "cumulative", maxDays: Math.floor(n) },
+                    }),
+                  );
+                }
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
   );
 };
 

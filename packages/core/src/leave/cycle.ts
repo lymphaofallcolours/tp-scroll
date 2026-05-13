@@ -22,6 +22,10 @@ export const LeaveCycleSchema = z
     bookingHorizonDays: NonNegInt.optional(),
     halfDaysAllowed: z.boolean(),
     countWeekends: z.boolean(),
+    // When true, public-holiday days inside a trip consume leave like any
+    // weekday. Defaults to false (the historic behavior) so existing
+    // sessions don't quietly start charging holidays.
+    countHolidays: z.boolean().default(false),
   })
   .refine((c) => c.end >= c.start, { message: "end must be >= start" })
   .refine((c) => c.bufferAtEnd <= c.totalDays, {

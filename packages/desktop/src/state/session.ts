@@ -5,6 +5,7 @@ import {
   rollCycle,
   type BlockedPeriod,
   type BucketKind,
+  type DepartureMode,
   type FlightConstraints,
   type LeaveBucket,
   type LeaveCycle,
@@ -12,6 +13,20 @@ import {
   type Session,
   type Trip,
 } from "@tp-scroll/core";
+
+/**
+ * Patch shape for the Cycle Rules card. Keeps the per-field nature of the form
+ * (any subset can be sent) while making the legal keys explicit at the call
+ * site so we don't accidentally let the UI mutate `start`/`end`/`totalDays`
+ * via this path — those are owned by Roll Cycle.
+ */
+type CycleRulesPatch = {
+  readonly countWeekends?: boolean;
+  readonly countHolidays?: boolean;
+  readonly halfDaysAllowed?: boolean;
+  readonly bufferAtEnd?: number;
+  readonly carryover?: LeaveCycle["carryover"];
+};
 import type { Holiday } from "@tp-scroll/adapter-holidays";
 import type { SessionSummary } from "@tp-scroll/adapter-storage";
 
@@ -63,6 +78,8 @@ type SessionState = {
   readonly deleteBlocked: (start: number, end: number) => Promise<void>;
   readonly addRegion: (input: RegionOverride) => Promise<void>;
   readonly deleteRegion: (id: string) => Promise<void>;
+  readonly setCycleRules: (patch: CycleRulesPatch) => Promise<void>;
+  readonly setDepartureMode: (mode: DepartureMode) => Promise<void>;
 };
 
 const persist = async (session: Session, isDemo: boolean): Promise<void> => {
@@ -346,6 +363,33 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const s = get().session;
     if (!s) return;
     const next = touch({ ...s, regions: s.regions.filter((r) => r.id !== id) });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  setCycleRules: async (patch) => {
+    const s = get().session;
+    if (!s) return;
+    const cycle: LeaveCycle = {
+      ...s.cycle,
+      ...(patch.countWeekends !== undefined ? { countWeekends: patch.countWeekends } : {}),
+      ...(patch.countHolidays !== undefined ? { countHolidays: patch.countHolidays } : {}),
+      ...(patch.halfDaysAllowed !== undefined ? { halfDaysAllowed: patch.halfDaysAllowed } : {}),
+      ...(patch.bufferAtEnd !== undefined ? { bufferAtEnd: patch.bufferAtEnd } : {}),
+      ...(patch.carryover !== undefined ? { carryover: patch.carryover } : {}),
+    };
+    if (cycle.bufferAtEnd > cycle.totalDays) {
+      throw new Error("bufferAtEnd cannot exceed cycle.totalDays");
+    }
+    const next = touch({ ...s, cycle });
+    set({ session: next });
+    await persist(next, get().isDemo);
+  },
+
+  setDepartureMode: async (mode) => {
+    const s = get().session;
+    if (!s) return;
+    const next = touch({ ...s, departureMode: mode });
     set({ session: next });
     await persist(next, get().isDemo);
   },
