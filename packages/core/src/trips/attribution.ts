@@ -15,6 +15,12 @@ export type ResolvedAttribution = {
 
 type DefaultRule = Omit<ResolvedAttribution, "day" | "halfDay">;
 
+// Leave-consumption rule is uniform across every day in a trip: a day
+// consumes a leave-day unless it's a public holiday, a residence weekend
+// (and `countWeekends` is off), or has been manually overridden. Travel-edge
+// days are no longer special-cased on `consumesLeave` — `departureMode` still
+// decides their *location* (residence vs transit), which matters for
+// Schengen day-counting but never for leave accounting.
 const defaultRuleFor = (
   day: DayInt,
   trip: Trip,
@@ -25,21 +31,6 @@ const defaultRuleFor = (
   const isReturnDay = day === trip.return;
   const isTravelEdge = isDepartureDay || isReturnDay;
 
-  if (isTravelEdge) {
-    if (session.departureMode === "last-home-day") {
-      return {
-        location: "residence",
-        isTravelDay: true,
-        consumesLeave: session.travelDayConsumesLeaveByDefault,
-      };
-    }
-    return {
-      location: "transit",
-      isTravelDay: true,
-      consumesLeave: session.travelDayConsumesLeaveByDefault,
-    };
-  }
-
   const isResWeekend = isWeekend(day, session.residenceCountry);
   const isHoliday = holidays.has(day);
   const consumesLeave = (() => {
@@ -47,6 +38,14 @@ const defaultRuleFor = (
     if (isResWeekend && !session.cycle.countWeekends) return false;
     return true;
   })();
+
+  if (isTravelEdge) {
+    return {
+      location: session.departureMode === "last-home-day" ? "residence" : "transit",
+      isTravelDay: true,
+      consumesLeave,
+    };
+  }
 
   return {
     location: "home",

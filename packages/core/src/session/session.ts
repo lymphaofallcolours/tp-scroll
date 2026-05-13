@@ -63,7 +63,10 @@ export const SessionSchema = z
     minGapDays: z.number().int().nonnegative().default(0),
     maxGapDays: z.number().int().nonnegative().default(365),
     regions: z.array(RegionOverrideSchema).default([]),
-    travelDayConsumesLeaveByDefault: z.boolean(),
+    // Retained for backwards compat with old session JSON on disk; the
+    // value is no longer read by the attribution engine. Travel-edge days
+    // now follow the same weekend/holiday/override rule as middle days.
+    travelDayConsumesLeaveByDefault: z.boolean().default(true),
     cycleHistory: z.array(HistoricalCycleSchema).default([]),
     createdAt: z.string(),
     updatedAt: z.string(),

@@ -211,6 +211,10 @@ export const TripForm = ({
         halfDaysAllowed={session.cycle.halfDaysAllowed}
         overrides={overrides}
         onChange={setOverrides}
+        session={session}
+        holidays={holidays}
+        bucketId={bucketId}
+        isActual={isActual}
       />
 
       <div className={styles.formActions}>

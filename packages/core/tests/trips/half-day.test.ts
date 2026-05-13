@@ -64,9 +64,9 @@ describe("half-day attribution", () => {
       dayOverrides: [{ day: d("2026-05-13"), consumesLeave: true, halfDay: true }],
     });
     const cost = computeTripCost(trip, session, new Set());
-    // 3 full interior weekdays at full cost + 1 half-day weekday at 0.5
-    expect(cost.leaveCost).toBeCloseTo(2.5);
-    // awayDays unchanged: interior days are away regardless of half-day
+    // Mon-Fri = 5 weekdays. Wed is 0.5; rest are 1 each → 4.5.
+    expect(cost.leaveCost).toBeCloseTo(4.5);
+    // awayDays counts interior (non-residence) days: Tue, Wed, Thu = 3.
     expect(cost.awayDays).toBe(3);
   });
 
@@ -81,8 +81,8 @@ describe("half-day attribution", () => {
       ],
     });
     const cost = computeTripCost(trip, session, new Set());
-    // 1 full (Wed) + 2 halves (Tue, Thu) = 2.0
-    expect(cost.leaveCost).toBeCloseTo(2.0);
+    // Mon (1) + Tue (0.5) + Wed (1) + Thu (0.5) + Fri (1) = 4.0
+    expect(cost.leaveCost).toBeCloseTo(4.0);
   });
 
   it("a half-day that does not consume leave costs 0 (consumesLeave wins)", () => {
@@ -93,10 +93,8 @@ describe("half-day attribution", () => {
       dayOverrides: [{ day: d("2026-05-13"), consumesLeave: false, halfDay: true }],
     });
     const cost = computeTripCost(trip, session, new Set());
-    // Wed (the override day) costs 0; Tue/Thu/Fri remain at 1 each (Mon dep, Fri ret)
-    // Actually under last-home-day: dep=Mon (residence), ret=Fri (residence)
-    // Interior: Tue, Wed, Thu — Wed overridden to no-leave
-    expect(cost.leaveCost).toBe(2);
+    // Mon (1) + Tue (1) + Wed (0 — override) + Thu (1) + Fri (1) = 4
+    expect(cost.leaveCost).toBe(4);
   });
 });
 

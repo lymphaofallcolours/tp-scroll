@@ -12,13 +12,14 @@ describe("computeTripCost", () => {
   const dep = d("2026-05-11");
   const ret = d("2026-05-17");
 
-  it("does not charge leave for departure/return under last-home-day default", () => {
+  it("charges leave for every non-weekend, non-holiday day including travel edges", () => {
     const session = makeSession();
     const trip = makeTrip({ departure: dep, return: ret });
     const cost = computeTripCost(trip, session, new Set());
-    // Interior weekdays Tue,Wed,Thu,Fri = 4 leave days. Sat/Sun weekend = 0.
-    expect(cost.leaveCost).toBe(4);
-    expect(cost.travelDays).toBe(2); // dep and ret
+    // Mon dep, Tue, Wed, Thu, Fri interior, Sat/Sun weekend (no leave),
+    // Sun return is also weekend. So leave = 5 (Mon-Fri).
+    expect(cost.leaveCost).toBe(5);
+    expect(cost.travelDays).toBe(2); // dep and ret are still travel edges
   });
 
   it("counts away-days as days not at residence", () => {
@@ -29,7 +30,7 @@ describe("computeTripCost", () => {
     expect(cost.awayDays).toBe(5);
   });
 
-  it("respects a Friday-no-leave-travel override (interior)", () => {
+  it("respects a Friday-no-leave override that takes a weekday out of the count", () => {
     const friday = d("2026-05-15");
     const session = makeSession();
     const trip = makeTrip({
@@ -40,21 +41,9 @@ describe("computeTripCost", () => {
       ],
     });
     const cost = computeTripCost(trip, session, new Set());
-    // Friday was a weekday with consumesLeave=true → now overridden to false.
-    expect(cost.leaveCost).toBe(3);
+    // Without the override leave = 5 (Mon-Fri). Friday is overridden to no-leave → 4.
+    expect(cost.leaveCost).toBe(4);
     expect(cost.travelDays).toBe(3); // dep, friday-travel, ret
-  });
-
-  it("respects a Monday-leave-travel override that turns a non-leave departure into a leave day", () => {
-    const session = makeSession(); // last-home-day default: dep is residence, no leave
-    const trip = makeTrip({
-      departure: dep, // Monday
-      return: ret,
-      dayOverrides: [{ day: dep, isTravelDay: true, consumesLeave: true }],
-    });
-    const cost = computeTripCost(trip, session, new Set());
-    // Default would be 4 (Tue-Fri). Override adds Monday as a leave day → 5.
-    expect(cost.leaveCost).toBe(5);
   });
 
   it("treats public holidays during the trip as 0 leave-cost days", () => {
@@ -62,7 +51,8 @@ describe("computeTripCost", () => {
     const trip = makeTrip({ departure: dep, return: ret });
     const holiday = d("2026-05-13"); // Wednesday
     const cost = computeTripCost(trip, session, new Set([holiday]));
-    expect(cost.leaveCost).toBe(3);
+    // Without the holiday leave = 5. Wed → 0 → leave = 4.
+    expect(cost.leaveCost).toBe(4);
   });
 
   it("counts every day when countWeekends=true (cycle override)", () => {
@@ -71,16 +61,16 @@ describe("computeTripCost", () => {
     });
     const trip = makeTrip({ departure: dep, return: ret });
     const cost = computeTripCost(trip, session, new Set());
-    // Default last-home-day: dep & ret = residence (no leave). Interior 5 days (Tue-Sat) all consume leave.
-    expect(cost.leaveCost).toBe(5);
+    // Mon-Sun = 7 days, all consume leave once weekends count.
+    expect(cost.leaveCost).toBe(7);
   });
 
-  it("a single-day trip with no overrides costs 0 leave under last-home-day default", () => {
+  it("a single-day weekday trip consumes 1 leave day under the new uniform rule", () => {
     const session = makeSession();
     const trip = makeTrip({ departure: dep, return: dep });
     const cost = computeTripCost(trip, session, new Set());
-    expect(cost.leaveCost).toBe(0);
-    expect(cost.awayDays).toBe(0);
+    expect(cost.leaveCost).toBe(1);
+    expect(cost.awayDays).toBe(0); // dep is residence under last-home-day mode
     expect(cost.travelDays).toBe(1);
   });
 

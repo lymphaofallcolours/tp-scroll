@@ -71,7 +71,8 @@ describe("computeBucketBalances", () => {
   it("attributes each trip's cost to its bucket", () => {
     const session = {
       ...twoBucketSession(),
-      // 2026-05-11 Mon → 2026-05-15 Fri = 3 interior weekdays of leave
+      // 2026-05-11 Mon → 2026-05-15 Fri = 5 weekdays of leave under the
+      // uniform rule (travel-edge days no longer free).
       trips: [
         makeTrip({
           id: "t1",
@@ -85,9 +86,9 @@ describe("computeBucketBalances", () => {
     const balances = computeBucketBalances(session, new Set());
     const annual = balances.find((b) => b.bucketId === "annual")!;
     const sick = balances.find((b) => b.bucketId === "sick")!;
-    expect(annual.balance.consumed).toBe(3);
+    expect(annual.balance.consumed).toBe(5);
     expect(sick.balance.consumed).toBe(0);
-    expect(annual.balance.remaining).toBe(22);
+    expect(annual.balance.remaining).toBe(20);
     expect(sick.balance.remaining).toBe(5);
   });
 

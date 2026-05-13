@@ -60,24 +60,56 @@ describe("resolveAttribution (default rule)", () => {
   });
 
   describe("last-home-day mode (default)", () => {
-    it("marks the departure day as residence, isTravelDay=true, consumesLeave=false (default)", () => {
+    it("marks the departure day as residence, isTravelDay=true, and (when a weekday) consumes leave", () => {
       const session = makeSession();
       const trip = makeTrip({ departure: dep, return: ret });
       const resolved = resolveAttribution(trip, session, new Set());
       const departure = resolved.find((r) => r.day === dep);
       expect(departure?.location).toBe("residence");
       expect(departure?.isTravelDay).toBe(true);
-      expect(departure?.consumesLeave).toBe(false);
+      // Travel-edge days no longer get a special free pass — they follow the
+      // same weekend/holiday/override rule as middle days. dep is a Wednesday.
+      expect(departure?.consumesLeave).toBe(true);
     });
 
-    it("marks the return day as residence, isTravelDay=true, consumesLeave=false (default)", () => {
+    it("marks a weekday return as residence, isTravelDay=true, and consumes leave", () => {
+      // dep=Mon, weekday return on Friday — both should consume leave under
+      // the new uniform rule.
+      const weekdayRet = d("2026-05-15"); // Friday
+      const session = makeSession();
+      const trip = makeTrip({ departure: dep, return: weekdayRet });
+      const resolved = resolveAttribution(trip, session, new Set());
+      const returning = resolved.find((r) => r.day === weekdayRet);
+      expect(returning?.location).toBe("residence");
+      expect(returning?.isTravelDay).toBe(true);
+      expect(returning?.consumesLeave).toBe(true);
+    });
+
+    it("the weekend rule wins over the travel-edge marker", () => {
+      // dep=Mon, ret=Sunday — the return-edge IS travel but it's also a
+      // weekend, so consumesLeave is false.
       const session = makeSession();
       const trip = makeTrip({ departure: dep, return: ret });
       const resolved = resolveAttribution(trip, session, new Set());
       const returning = resolved.find((r) => r.day === ret);
-      expect(returning?.location).toBe("residence");
       expect(returning?.isTravelDay).toBe(true);
       expect(returning?.consumesLeave).toBe(false);
+    });
+
+    it("travel-edge days that fall on a weekend still skip leave (weekend rule wins)", () => {
+      // Friday → Monday trip: Saturday/Sunday in the middle don't count;
+      // Friday/Monday are weekday travel edges and DO count.
+      const friDep = d("2026-05-15"); // Friday
+      const monRet = d("2026-05-18"); // Monday
+      const session = makeSession();
+      const trip = makeTrip({ departure: friDep, return: monRet });
+      const resolved = resolveAttribution(trip, session, new Set());
+      const fri = resolved.find((r) => r.day === friDep);
+      const mon = resolved.find((r) => r.day === monRet);
+      expect(fri?.consumesLeave).toBe(true);
+      expect(mon?.consumesLeave).toBe(true);
+      const total = resolved.filter((r) => r.consumesLeave).length;
+      expect(total).toBe(2);
     });
   });
 
