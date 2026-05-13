@@ -71,14 +71,16 @@ export const MonthGrid = ({ view }: Props): JSX.Element => {
               return <div key={`b-${wIdx}-${dIdx}`} className={`${styles.cell} ${styles.cellBlank}`} />;
             }
             const cls = cellClassFor[cell.kind];
+            const homeCls = cell.homeHoliday === true ? ` ${styles.cellHomeHoliday}` : "";
             const style = tripStyleFor(cell);
-            const title = cell.bucketKind
-              ? `${cell.date.toString()} — ${cell.kind} · ${cell.bucketKind}`
-              : `${cell.date.toString()} — ${cell.kind}`;
+            const titleParts = [cell.date.toString(), cell.kind];
+            if (cell.bucketKind) titleParts.push(cell.bucketKind);
+            if (cell.holidayName) titleParts.push(`“${cell.holidayName}”`);
+            const title = titleParts.join(" — ");
             return (
               <div
                 key={`c-${wIdx}-${dIdx}`}
-                className={`${styles.cell} ${cls}`}
+                className={`${styles.cell} ${cls}${homeCls}`}
                 {...(style !== undefined ? { style } : {})}
                 title={title}
               >

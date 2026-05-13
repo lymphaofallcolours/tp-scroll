@@ -66,8 +66,16 @@ export const Calendar = ({ session, holidays, homeHolidays = [] }: Props): JSX.E
       <div className={styles.legend} role="region" aria-label="Legend">
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchResidence}`} /> residence weekday</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchWeekend}`} /> weekend</span>
-        <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchHoliday}`} /> {session.residenceCountry} public holiday</span>
-        <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchHomeHoliday}`} /> {session.homeCountry} public holiday</span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.swatch} ${styles.swatchHoliday}`} />{" "}
+          {session.residenceCountry} public holiday
+          <span className={styles.legendCount}>({holidays.length})</span>
+        </span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.swatch} ${styles.swatchHomeHoliday}`} />{" "}
+          {session.homeCountry} public holiday
+          <span className={styles.legendCount}>({homeHolidays.length})</span>
+        </span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchBlocked}`} /> blocked</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchActual}`} /> trip · actual</span>
         <span className={styles.legendItem}><span className={`${styles.swatch} ${styles.swatchPlanned}`} /> trip · planned</span>

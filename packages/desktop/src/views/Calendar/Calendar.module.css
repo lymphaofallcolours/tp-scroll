@@ -83,6 +83,12 @@
   gap: var(--space-2);
 }
 
+.legendCount {
+  font-feature-settings: "tnum" 1;
+  color: var(--ink-tertiary);
+  margin-left: 4px;
+}
+
 .swatch {
   width: 14px;
   height: 14px;
