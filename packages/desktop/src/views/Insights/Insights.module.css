@@ -257,6 +257,131 @@
   position: relative;
 }
 
+/* Plan vs actual diff */
+.diffIdle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--type-body);
+  color: var(--ink-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.runBtn {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink-primary);
+  color: var(--surface-page);
+  border: none;
+  border-radius: var(--radius-cell);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-quiet);
+}
+
+.runBtn:hover {
+  background: var(--accent-trip);
+}
+
+.diffSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+  color: var(--ink-secondary);
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--surface-edge);
+}
+
+.diffSummary strong {
+  color: var(--ink-primary);
+  font-feature-settings: "tnum" 1;
+  font-weight: 500;
+}
+
+.diffList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.diffRow {
+  display: grid;
+  grid-template-columns: 16px auto auto auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-page);
+  border: 1px solid var(--surface-edge);
+  border-radius: var(--radius-cell);
+  font-family: var(--font-mono);
+  font-size: var(--type-mono);
+}
+
+.diffMark {
+  font-family: var(--font-mono);
+  text-align: center;
+  font-feature-settings: "tnum" 1;
+}
+
+.diffSource {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.diffDates {
+  color: var(--ink-primary);
+  font-feature-settings: "tnum" 1;
+}
+
+.diffMeta {
+  color: var(--ink-tertiary);
+  font-feature-settings: "tnum" 1;
+}
+
+.diffNote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-tertiary);
+  text-align: right;
+}
+
+.diffOk {
+  border-color: var(--accent-bucket-annual-soft);
+}
+
+.diffOk .diffMark {
+  color: var(--accent-bucket-annual);
+}
+
+.diffMissing {
+  border-color: var(--accent-bucket-parental-soft);
+}
+
+.diffMissing .diffMark {
+  color: var(--accent-bucket-parental);
+}
+
+.diffExtra {
+  border-color: var(--accent-blocked-soft);
+}
+
+.diffExtra .diffMark {
+  color: var(--accent-blocked);
+}
+
 /* Schengen */
 .schengenFrame {
   display: flex;

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ArcElement,
   BarElement,
@@ -12,6 +12,12 @@ import {
   Tooltip,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import {
+  FixedClock,
+  isoFromDayInt,
+  optimize,
+  type TripPlan,
+} from "@tp-scroll/core";
 
 import { useSessionStore } from "../../state/session.js";
 
@@ -153,6 +159,8 @@ export const Insights = (): JSX.Element | null => {
       </div>
 
       <TripLengthPanel histogram={histogram} />
+
+      <PlanVsActualPanel />
 
       <MonthlyDistributionPanel monthly={monthly} />
 
@@ -493,6 +501,197 @@ const TripLengthPanel = ({
         <Bar data={data} options={options} />
       </div>
     </Panel>
+  );
+};
+
+type DiffRow =
+  | { source: "optimal"; departure: number; return: number; matchedActual: boolean }
+  | { source: "actual"; departure: number; return: number; matchedOptimal: boolean; isActual: boolean };
+
+type DiffState =
+  | { kind: "idle" }
+  | { kind: "running" }
+  | { kind: "done"; rows: DiffRow[]; planScore: TripPlan; durationMs: number }
+  | { kind: "error"; message: string };
+
+const overlapsRange = (
+  a: { departure: number; return: number },
+  b: { departure: number; return: number },
+): boolean => a.departure <= b.return && b.departure <= a.return;
+
+const PlanVsActualPanel = (): JSX.Element => {
+  const session = useSessionStore((s) => s.session);
+  const holidays = useSessionStore((s) => s.holidays);
+  const [state, setState] = useState<DiffState>({ kind: "idle" });
+
+  if (!session) return <Panel title="Plan vs actual"><></></Panel>;
+
+  const run = (): void => {
+    setState({ kind: "running" });
+    // Yield so React paints the running state before we burn the main thread.
+    setTimeout(() => {
+      try {
+        const t0 = performance.now();
+        const sessionActualsOnly = {
+          ...session,
+          // Strip planned trips so the optimizer plans into the same budget
+          // the user actually still has. Without this, an existing planned
+          // trip would block the optimizer from suggesting anything in that
+          // window, giving misleading "match" data.
+          trips: session.trips.filter((t) => t.isActual),
+        };
+        const plans = optimize(sessionActualsOnly, {
+          clock: FixedClock(session.cycle.start),
+          holidays: new Set(holidays.map((h) => h.day)),
+          topK: 1,
+        });
+        const optimal = plans[0];
+        if (!optimal) {
+          setState({ kind: "error", message: "Optimizer returned no plan" });
+          return;
+        }
+
+        const optimalTrips = optimal.trips.map((t) => ({
+          departure: t.departure,
+          return: t.return,
+        }));
+        // Include both actuals and planned trips for comparison — the user's
+        // intent is to see "what I have" vs "what the optimizer would do".
+        const userTrips = session.trips.map((t) => ({
+          departure: t.departure,
+          return: t.return,
+          isActual: t.isActual,
+        }));
+
+        const rows: DiffRow[] = [];
+        for (const o of optimalTrips) {
+          rows.push({
+            source: "optimal",
+            departure: o.departure,
+            return: o.return,
+            matchedActual: userTrips.some((u) => overlapsRange(o, u)),
+          });
+        }
+        for (const u of userTrips) {
+          rows.push({
+            source: "actual",
+            departure: u.departure,
+            return: u.return,
+            isActual: u.isActual,
+            matchedOptimal: optimalTrips.some((o) => overlapsRange(u, o)),
+          });
+        }
+        rows.sort((a, b) => a.departure - b.departure || (a.source === b.source ? 0 : a.source === "optimal" ? -1 : 1));
+
+        const t1 = performance.now();
+        setState({ kind: "done", rows, planScore: optimal, durationMs: t1 - t0 });
+      } catch (err) {
+        setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
+      }
+    }, 30);
+  };
+
+  return (
+    <Panel
+      title="Plan vs actual"
+      subtitle="how your current trips line up with the optimizer's top plan"
+    >
+      {state.kind === "idle" && (
+        <div className={styles.diffIdle}>
+          <p>
+            Runs the optimizer against your session (counting only actual trips toward the budget),
+            then shows which of its suggested trips you've already booked / planned and which trips
+            you have that wouldn't be in the optimal plan.
+          </p>
+          <button type="button" className={styles.runBtn} onClick={run}>
+            Compute optimal plan
+          </button>
+        </div>
+      )}
+      {state.kind === "running" && (
+        <div className={styles.diffIdle}>Computing — this may take a few seconds…</div>
+      )}
+      {state.kind === "error" && (
+        <div className={styles.diffIdle} style={{ color: "var(--accent-blocked)" }}>
+          {state.message}
+        </div>
+      )}
+      {state.kind === "done" && <DiffTable rows={state.rows} score={state.planScore} duration={state.durationMs} />}
+      {state.kind === "done" && (
+        <button type="button" className={styles.runBtn} onClick={run} style={{ alignSelf: "flex-start" }}>
+          Recompute
+        </button>
+      )}
+    </Panel>
+  );
+};
+
+const DiffTable = ({
+  rows,
+  score,
+  duration,
+}: {
+  rows: ReadonlyArray<DiffRow>;
+  score: TripPlan;
+  duration: number;
+}): JSX.Element => {
+  const matchedOptimal = rows.filter((r) => r.source === "optimal" && r.matchedActual).length;
+  const totalOptimal = rows.filter((r) => r.source === "optimal").length;
+  const extraActual = rows.filter((r) => r.source === "actual" && !r.matchedOptimal).length;
+
+  return (
+    <>
+      <div className={styles.diffSummary}>
+        <span>
+          <strong>{matchedOptimal}/{totalOptimal}</strong> optimal trips covered by yours
+        </span>
+        <span>
+          <strong>{extraActual}</strong> of yours not in the optimal plan
+        </span>
+        <span style={{ color: "var(--ink-tertiary)" }}>
+          {score.awayDaysTotal}d home in optimal plan · ran in {duration.toFixed(0)} ms
+        </span>
+      </div>
+      <ul className={styles.diffList}>
+        {rows.map((r, i) => {
+          const days = r.return - r.departure + 1;
+          if (r.source === "optimal") {
+            const tone = r.matchedActual ? styles.diffOk : styles.diffMissing;
+            return (
+              <li key={`o-${i}`} className={`${styles.diffRow} ${tone}`}>
+                <span className={styles.diffMark} aria-hidden="true">
+                  {r.matchedActual ? "★" : "+"}
+                </span>
+                <span className={styles.diffSource}>optimal</span>
+                <span className={styles.diffDates}>
+                  {isoFromDayInt(r.departure)} → {isoFromDayInt(r.return)}
+                </span>
+                <span className={styles.diffMeta}>{String(days).padStart(2, "0")}d</span>
+                <span className={styles.diffNote}>
+                  {r.matchedActual ? "covered" : "missing — consider adding"}
+                </span>
+              </li>
+            );
+          }
+          const tone = r.matchedOptimal ? styles.diffOk : styles.diffExtra;
+          return (
+            <li key={`a-${i}`} className={`${styles.diffRow} ${tone}`}>
+              <span className={styles.diffMark} aria-hidden="true">
+                {r.matchedOptimal ? "●" : "◯"}
+              </span>
+              <span className={styles.diffSource}>{r.isActual ? "actual" : "planned"}</span>
+              <span className={styles.diffDates}>
+                {isoFromDayInt(r.departure)} → {isoFromDayInt(r.return)}
+              </span>
+              <span className={styles.diffMeta}>{String(days).padStart(2, "0")}d</span>
+              <span className={styles.diffNote}>
+                {r.matchedOptimal ? "aligns with optimal" : "outside optimal plan"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 };
 
