@@ -1,21 +1,21 @@
+/* Each month is a self-contained card in the parent's 2-column grid. The
+   header (title + stats) sits above the grid; the grid uses fluid columns
+   so cells scale up to ~75px on a typical card width while the page max
+   is 1320px. */
 .month {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
-  gap: var(--space-5);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--surface-edge);
-}
-
-.month:first-of-type {
-  border-top: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-edge);
+  border-radius: var(--radius-card);
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  min-width: 220px;
+  gap: var(--space-1);
 }
 
 .title {
@@ -46,15 +46,16 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(7, 28px);
-  grid-auto-rows: 28px;
-  gap: 3px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: var(--space-2);
 }
 
 .weekdayLabel {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-bottom: var(--space-1);
   font-family: var(--font-mono);
   font-size: var(--type-mono-sm);
   color: var(--ink-faint);
@@ -62,13 +63,14 @@
 }
 
 .cell {
+  aspect-ratio: 1 / 1;
   border-radius: var(--radius-cell);
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
-  padding: 2px 4px;
+  padding: 4px 6px;
   font-family: var(--font-mono);
-  font-size: var(--type-mono-sm);
+  font-size: var(--type-body);
   font-feature-settings: "tnum" 1;
   color: var(--ink-secondary);
   transition: transform var(--duration-fast) var(--ease-quiet);
@@ -91,7 +93,7 @@
 /* Anchor marker: a small filled circle in the bottom-left corner. Composes
    with any kind, including the home-holiday triangle (opposite corner) so
    a day can be both. The day-number sits bottom-right so this corner is
-   visually empty otherwise. */
+   visually empty otherwise. Scaled with the larger cells. */
 .cellAnchor {
   position: relative;
 }
@@ -99,13 +101,13 @@
 .cellAnchor::after {
   content: "";
   position: absolute;
-  bottom: 3px;
-  left: 3px;
-  width: 6px;
-  height: 6px;
+  bottom: 5px;
+  left: 5px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--ink-primary);
-  border: 1px solid var(--surface-card);
+  border: 1.5px solid var(--surface-card);
 }
 
 .cellBlank {
@@ -132,7 +134,8 @@
 
 /* Home-country holiday — a small triangular notch in the top-right corner.
    Composable with any base kind so a residence holiday that is ALSO a home
-   holiday paints the gold cell AND the corner mark. */
+   holiday paints the gold cell AND the corner mark. Sized for the larger
+   cells now in use (was 8px when cells were 28px). */
 .cellHomeHoliday::before {
   content: "";
   position: absolute;
@@ -141,7 +144,7 @@
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 0 8px 8px 0;
+  border-width: 0 14px 14px 0;
   border-color: transparent var(--accent-bucket-parental) transparent transparent;
 }
 
