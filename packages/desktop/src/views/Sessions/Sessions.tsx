@@ -14,6 +14,7 @@ import {
 
 import { bridge } from "../../api/bridge.js";
 import type { FlightCredentialsStatus } from "../../api/types.js";
+import { CountryPicker } from "../../components/CountryPicker.js";
 import { Hint } from "../../components/Hint.js";
 import { useSessionStore } from "../../state/session.js";
 import styles from "./Sessions.module.css";
@@ -268,33 +269,27 @@ export const Sessions = (): JSX.Element | null => {
                 onChange={(e) => setCreateName(e.target.value)}
               />
             </div>
-            <div className={styles.fieldRow}>
-              <div className={styles.field}>
-                <span className={styles.fieldLabel}>
-                  Residence
-                  <Hint text="ISO-3166 alpha-2 code of the country where you currently live and work. This is where your annual-leave contract is, where weekends/public holidays apply, and where trips depart FROM." />
-                </span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  maxLength={2}
-                  value={createResidence}
-                  onChange={(e) => setCreateResidence(e.target.value.toUpperCase())}
-                />
-              </div>
-              <div className={styles.field}>
-                <span className={styles.fieldLabel}>
-                  Home
-                  <Hint text="ISO-3166 alpha-2 code of the country you go HOME to — where your family/origin is. The optimizer's whole purpose is to maximise time here. Its public holidays appear as a teal corner marker on the calendar." />
-                </span>
-                <input
-                  type="text"
-                  className={styles.input}
-                  maxLength={2}
-                  value={createHome}
-                  onChange={(e) => setCreateHome(e.target.value.toUpperCase())}
-                />
-              </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>
+                Residence
+                <Hint text="Country where you currently live and work. Drives weekends, public holidays, and the 'from' side of every trip." />
+              </span>
+              <CountryPicker
+                value={createResidence}
+                onChange={(code) => setCreateResidence(code)}
+                ariaLabel="Residence country"
+              />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>
+                Home
+                <Hint text="Country you go HOME to — where your family/origin is. The optimizer's whole purpose is to maximise time here." />
+              </span>
+              <CountryPicker
+                value={createHome}
+                onChange={(code) => setCreateHome(code)}
+                ariaLabel="Home country"
+              />
             </div>
             <button type="button" className={styles.primaryBtn} onClick={() => void onCreate()}>
               Create session
