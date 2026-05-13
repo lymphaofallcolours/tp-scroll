@@ -12,12 +12,10 @@ export {
   type CachingFlightProviderOptions,
 } from "./cache.js";
 export {
-  AmadeusFlightProvider,
-  type AmadeusOptions,
-  parseIsoDurationMinutes,
-  parseAtHour,
-  amadeusFromEnv,
-} from "./amadeus.js";
+  TravelpayoutsFlightProvider,
+  type TravelpayoutsOptions,
+  travelpayoutsFromEnv,
+} from "./travelpayouts.js";
 export { DEFAULT_AIRPORTS, resolveIata } from "./airports.js";
 export {
   annotatePlan,

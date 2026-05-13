@@ -251,7 +251,7 @@ export const Sessions = (): JSX.Element | null => {
 
               <SectionHeader title="Data" subtitle="external providers, stored locally" />
 
-              <AmadeusCredentialsCard />
+              <FlightProviderCredentialsCard />
             </>
           )}
         </section>
@@ -786,11 +786,10 @@ const RegionOverridesCard = ({
   );
 };
 
-const AmadeusCredentialsCard = (): JSX.Element => {
+const FlightProviderCredentialsCard = (): JSX.Element => {
   const [status, setStatus] = useState<FlightCredentialsStatus | null>(null);
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [showSecret, setShowSecret] = useState(false);
+  const [token, setToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -809,10 +808,9 @@ const AmadeusCredentialsCard = (): JSX.Element => {
     setError(null);
     setBusy(true);
     try {
-      const next = await bridge.flights.credentials.set(clientId.trim(), clientSecret);
+      const next = await bridge.flights.credentials.set(token.trim());
       setStatus(next);
-      setClientId("");
-      setClientSecret("");
+      setToken("");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -836,8 +834,8 @@ const AmadeusCredentialsCard = (): JSX.Element => {
   const sourceLabel = (() => {
     if (status === null) return "(loading)";
     if (status.offline === true) return "offline — provider disabled by TP_SCROLL_NETWORK=off";
-    if (status.source === "env") return `env vars (${status.clientIdMasked ?? "•••"})`;
-    if (status.source === "file") return `saved on disk (${status.clientIdMasked ?? "•••"})`;
+    if (status.source === "env") return `env var (${status.tokenMasked ?? "•••"})`;
+    if (status.source === "file") return `saved on disk (${status.tokenMasked ?? "•••"})`;
     return "none — using mock prices";
   })();
 
@@ -845,58 +843,46 @@ const AmadeusCredentialsCard = (): JSX.Element => {
     <div className={styles.card}>
       <h2 className={styles.columnTitle}>
         Flight provider credentials
-        <Hint text="Real flight prices come from Amadeus Self-Service — a free developer plan with ample monthly quota. Paste your test-environment client id and secret here. They're stored in ~/.tp-scroll/flights.json with 0600 permissions and never leave your machine except to call the Amadeus API." />
+        <Hint text="Real flight prices come from Travelpayouts — a free affiliate API. Sign up at travelpayouts.com, then copy your API token from Profile → API tokens. Stored locally in ~/.tp-scroll/flights.json with 0600 permissions and never sent except to api.travelpayouts.com." />
       </h2>
       <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
         Provider: <strong>{status?.providerName ?? "…"}</strong> · Source:{" "}
         <strong>{sourceLabel}</strong>
       </p>
+      <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
+        Prices are indicative — Travelpayouts caches the cheapest tickets actually searched by
+        other users in the last 48 hours, not live availability.
+      </p>
 
       {status?.source === "env" && (
         <p className={styles.cycleSummary} style={{ borderBottom: "none", paddingBottom: 0 }}>
-          Environment variables are set, so they take precedence. To use UI-saved credentials
-          instead, unset <code>TP_SCROLL_AMADEUS_CLIENT_ID</code> and restart.
+          Environment variable is set, so it takes precedence. To use a UI-saved token instead,
+          unset <code>TP_SCROLL_TRAVELPAYOUTS_TOKEN</code> and restart.
         </p>
       )}
 
       <div className={styles.field}>
         <span className={styles.fieldLabel}>
-          Client ID
-          <Hint text="From dashboard.amadeus.com → My Self-Service Workspace → App → API Key" />
+          API token
+          <Hint text="From travelpayouts.com → Profile → API tokens. The token is a single opaque string; no separate secret." />
         </span>
         <input
-          type="text"
+          type={showToken ? "text" : "password"}
           className={styles.input}
           autoComplete="off"
           spellCheck={false}
-          value={clientId}
-          placeholder="paste API key"
+          value={token}
+          placeholder="paste Travelpayouts API token"
           disabled={busy || status?.source === "env"}
-          onChange={(e) => setClientId(e.target.value)}
-        />
-      </div>
-      <div className={styles.field}>
-        <span className={styles.fieldLabel}>
-          Client Secret
-          <Hint text="From the same Amadeus app page. Stored on disk with 0600 permissions; never printed in logs." />
-        </span>
-        <input
-          type={showSecret ? "text" : "password"}
-          className={styles.input}
-          autoComplete="off"
-          spellCheck={false}
-          value={clientSecret}
-          placeholder="paste API secret"
-          disabled={busy || status?.source === "env"}
-          onChange={(e) => setClientSecret(e.target.value)}
+          onChange={(e) => setToken(e.target.value)}
         />
         <button
           type="button"
           className={styles.linkBtn}
           style={{ alignSelf: "flex-start", marginTop: 4 }}
-          onClick={() => setShowSecret((v) => !v)}
+          onClick={() => setShowToken((v) => !v)}
         >
-          {showSecret ? "hide" : "show"}
+          {showToken ? "hide" : "show"}
         </button>
       </div>
 
@@ -904,7 +890,7 @@ const AmadeusCredentialsCard = (): JSX.Element => {
         <button
           type="button"
           className={styles.primaryBtn}
-          disabled={busy || status?.source === "env" || clientId.trim().length === 0 || clientSecret.length === 0}
+          disabled={busy || status?.source === "env" || token.trim().length === 0}
           onClick={() => void onSave()}
         >
           {busy ? "Saving…" : "Save"}

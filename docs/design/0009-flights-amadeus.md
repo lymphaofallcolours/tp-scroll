@@ -1,6 +1,8 @@
 # ADR 0009 — Flight provider (Amadeus Self-Service)
 
-**Status:** Accepted (2026-05-13)
+**Status:** SUPERSEDED by [0012-flights-travelpayouts](./0012-flights-travelpayouts.md) (2026-05-13 — Amadeus Self-Service portal decommissioning announced for 2026-07-17). Kept as historical record; do not implement against this design.
+
+Original status: Accepted (2026-05-13)
 
 ## Context
 

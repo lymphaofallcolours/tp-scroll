@@ -29,8 +29,8 @@ const api = {
     annotate: (req: unknown) => invoke("flights:annotate", req),
     credentials: {
       status: () => invoke("flights:credentials:status"),
-      set: (clientId: string, clientSecret: string) =>
-        invoke("flights:credentials:set", { clientId, clientSecret }),
+      set: (token: string, currency?: string) =>
+        invoke("flights:credentials:set", { token, currency }),
       clear: () => invoke("flights:credentials:clear"),
     },
   },

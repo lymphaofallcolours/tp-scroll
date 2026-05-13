@@ -100,9 +100,9 @@ export const Plan = (): JSX.Element | null => {
   // v1.7 post-processing applied AFTER plans + annotations are both available.
   // The optimizer's full flight-aware path (engine-side) requires pre-fetching
   // flight info for every candidate, which is fine on the mock provider but
-  // would burn through Amadeus rate limits. The renderer instead applies the
-  // same constraint check + price tiebreaker over the existing top-K so the
-  // visible behavior matches without the bandwidth cost.
+  // would chew through the Travelpayouts rate limit. The renderer instead
+  // applies the same constraint check + price tiebreaker over the existing
+  // top-K so the visible behavior matches without the bandwidth cost.
   const displayedPlans = useMemo(() => {
     if (state.kind !== "done") return [] as ReadonlyArray<TripPlan>;
     let plans = state.plans;
@@ -179,8 +179,8 @@ export const Plan = (): JSX.Element | null => {
             <Hint
               text={
                 isMockFlights
-                  ? "Showing mock prices. To enable real prices, register a free Amadeus Self-Service account and set TP_SCROLL_AMADEUS_CLIENT_ID + _CLIENT_SECRET before launching, or use the Settings card on the Sessions tab."
-                  : "Fetches the cheapest direct flight for each trip's outbound and return legs from Amadeus."
+                  ? "Showing mock prices. To enable real (indicative) prices, register a free Travelpayouts account and set TP_SCROLL_TRAVELPAYOUTS_TOKEN before launching, or use the credentials card on the Sessions tab."
+                  : "Fetches the cheapest direct flight for each trip's outbound and return legs from Travelpayouts. Prices are 48h-cached snapshots of real user searches — indicative, not live."
               }
             />
           </label>

@@ -1,22 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { parseAtHour } from "../src/amadeus.js";
 import { MockFlightProvider } from "../src/mock.js";
 import { legInfoOf, type FlightQuote } from "../src/provider.js";
-
-describe("parseAtHour", () => {
-  it("extracts the hour from an Amadeus 'at' timestamp", () => {
-    expect(parseAtHour("2026-04-10T18:45:00")).toBe(18);
-    expect(parseAtHour("2026-12-19T07:05:00")).toBe(7);
-    expect(parseAtHour("2026-12-19T00:30:00")).toBe(0);
-    expect(parseAtHour("2026-12-19T23:59:00")).toBe(23);
-  });
-  it("returns undefined for malformed input", () => {
-    expect(parseAtHour(undefined)).toBeUndefined();
-    expect(parseAtHour("nope")).toBeUndefined();
-    expect(parseAtHour("2026-04-10")).toBeUndefined();
-  });
-});
 
 describe("MockFlightProvider — depart/arrive hours", () => {
   it("returns hours within 0..23", async () => {

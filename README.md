@@ -11,7 +11,7 @@ A TypeScript monorepo with a pure domain core, pluggable adapters for public-hol
 - `@tp-scroll/core` — pure engine (calendar, leave cycles, trips, constraints, optimizer)
 - `@tp-scroll/adapter-holidays` — public-holiday providers (Nager + date-holidays fallback)
 - `@tp-scroll/adapter-storage` — atomic JSON-file session storage
-- `@tp-scroll/adapter-flights` — flight-price providers (Amadeus Self-Service + Mock, caching wrapper, annotation orchestrator)
+- `@tp-scroll/adapter-flights` — flight-price providers (Travelpayouts + Mock, caching wrapper, annotation orchestrator)
 - `@tp-scroll/cli` — `tp-scroll` command-line tool
 - `@tp-scroll/desktop` — Electron app with calendar grid, trip CRUD, plan view (now with flight prices), burndown chart, sessions management
 
@@ -55,16 +55,17 @@ Set `TP_SCROLL_NETWORK=off` and both the holiday and flight providers fall back 
 
 ### Flight prices (optional)
 
-Register a free [Amadeus Self-Service](https://developers.amadeus.com/) account, then:
+Register a free [Travelpayouts](https://travelpayouts.com/) account, copy the token from Profile → API tokens, then either:
 
 ```bash
-export TP_SCROLL_AMADEUS_CLIENT_ID=...
-export TP_SCROLL_AMADEUS_CLIENT_SECRET=...
+export TP_SCROLL_TRAVELPAYOUTS_TOKEN=...
+# optional, defaults to EUR
+export TP_SCROLL_TRAVELPAYOUTS_CURRENCY=EUR
 ```
 
-The Plan view's "flights" toggle then fetches real prices for each trip's legs (queries are cached for 24h to stay under the free-tier rate limit). Without credentials, the toggle returns mock data with a `(mock)` badge in the UI.
+… or paste the token into the **Flight provider credentials** card on the Sessions tab (stored locally in `~/.tp-scroll/flights.json` with mode 0600). The Plan view's "flights" toggle then fetches indicative prices for each trip's legs (queries are cached for 24h to stay under the 60-rpm rate limit). Without a token, the toggle returns mock data with a `(mock)` badge in the UI.
 
-See [`docs/design/0009-flights-amadeus.md`](docs/design/0009-flights-amadeus.md) for the integration details.
+Prices come from a 48-hour rolling cache of what other users have actually searched — they're useful for planning, not booking. See [`docs/design/0012-flights-travelpayouts.md`](docs/design/0012-flights-travelpayouts.md) for the integration details and the Amadeus → Travelpayouts pivot (2026-05-13).
 
 ## Development
 

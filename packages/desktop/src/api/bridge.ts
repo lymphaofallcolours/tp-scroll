@@ -4,7 +4,7 @@ import type { TpScrollApi } from "./types.js";
 
 // When the renderer runs outside Electron (vitest, vite preview), bridge calls
 // fall back to local stubs. Flights specifically run through the same
-// MockFlightProvider the main process would use when no Amadeus creds are
+// MockFlightProvider the main process would use when no Travelpayouts token is
 // configured, so the demo UI still paints prices.
 const stubFlightProvider = new MockFlightProvider();
 
@@ -42,17 +42,17 @@ const stubBridge: TpScrollApi = {
     credentials: {
       status: async () => ({
         source: "none" as const,
-        clientIdMasked: null,
+        tokenMasked: null,
         providerName: "mock",
       }),
       set: async () => ({
         source: "none" as const,
-        clientIdMasked: null,
+        tokenMasked: null,
         providerName: "mock",
       }),
       clear: async () => ({
         source: "none" as const,
-        clientIdMasked: null,
+        tokenMasked: null,
         providerName: "mock",
       }),
     },

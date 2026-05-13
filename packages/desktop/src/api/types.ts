@@ -49,7 +49,7 @@ export type TpScrollApi = {
     }): Promise<AnnotatedTripPlan>;
     readonly credentials: {
       status(): Promise<FlightCredentialsStatus>;
-      set(clientId: string, clientSecret: string): Promise<FlightCredentialsStatus>;
+      set(token: string, currency?: string): Promise<FlightCredentialsStatus>;
       clear(): Promise<FlightCredentialsStatus>;
     };
   };
@@ -57,7 +57,7 @@ export type TpScrollApi = {
 
 export type FlightCredentialsStatus = {
   readonly source: "env" | "file" | "none";
-  readonly clientIdMasked: string | null;
+  readonly tokenMasked: string | null;
   readonly providerName: string;
   readonly offline?: boolean;
 };

@@ -4,7 +4,9 @@
 
 ## Context
 
-v1.5 (ADR 0009) wired in Amadeus flight quotes as **informational** annotations on the optimizer's output. v1.7 promotes flight data to **decisional** — flight prices and time-of-day constraints now shape which plans appear in top-K and in what order. Per the original prompt: optional price-as-objective, max flight duration constraint, and time-of-day (depart-after / arrive-before) with AND/OR composition.
+v1.5 (originally ADR 0009 with Amadeus, now ADR 0012 with Travelpayouts) wired in flight quotes as **informational** annotations on the optimizer's output. v1.7 promotes flight data to **decisional** — flight prices and time-of-day constraints now shape which plans appear in top-K and in what order. Per the original prompt: optional price-as-objective, max flight duration constraint, and time-of-day (depart-after / arrive-before) with AND/OR composition.
+
+The original v1.5 ADR (Amadeus) was superseded on 2026-05-13 when Amadeus announced its Self-Service portal EOL for 2026-07-17. The interface described in this ADR is provider-agnostic and survived the pivot unchanged — only the concrete adapter class swapped.
 
 ## Decision
 
@@ -65,7 +67,7 @@ type OptimizeOptions = {
 
 The optimizer is a hot synchronous loop; making it async would cascade through the whole compareScores chain. Pre-fetching outside the optimizer keeps the search tight and lets the caller decide HOW to source the data:
 
-- Desktop demo: fetch for all candidates upfront (mock provider is instant; Amadeus would be slow).
+- Desktop demo: fetch for all candidates upfront (mock provider is instant; Travelpayouts would be slow and would chew through the rate limit).
 - A future CLI command: stream + cache per route.
 - A test: feed a deterministic in-memory map.
 
@@ -78,7 +80,7 @@ Common alternative: "depart after 18" applies only to the outbound leg (the trip
 - **Sessions view**: new "Flight constraints" card with four inputs (max duration, AND/OR combine, depart after, arrive before) plus Apply/Clear. Persists to `session.flightConstraints` via the new `setFlightConstraints` store action.
 - **Plan view**: new "price-aware" checkbox in the control bar (gated on "flights" being enabled — without prices, there's nothing to rank by). When on, the displayed top-K is re-ordered post-hoc: filtered by `passesFlightConstraints` against the per-trip annotations, then sorted by `compareScores` with price as the tiebreaker.
 
-The renderer applies the constraint check as a **post-process** over the top-K (not by pre-fetching flight info for every candidate before optimize runs). For a one-year session with 800 capped candidates × 2 legs = 1600 quotes per run, pre-fetching is fine with the mock provider but would crush Amadeus's 2k/month free tier. The post-process approach delivers the user-visible behavior without the bandwidth cost. Engine callers (CLI scripts, future host) can still take the full pre-fetch path via the optimizer's `flightInfo` + `priceAware` options.
+The renderer applies the constraint check as a **post-process** over the top-K (not by pre-fetching flight info for every candidate before optimize runs). For a one-year session with 800 capped candidates × 2 legs = 1600 quotes per run, pre-fetching is fine with the mock provider but would chew through Travelpayouts's 60-rpm rate limit. The post-process approach delivers the user-visible behavior without the bandwidth cost. Engine callers (CLI scripts, future host) can still take the full pre-fetch path via the optimizer's `flightInfo` + `priceAware` options.
 
 ## Alternatives considered
 
