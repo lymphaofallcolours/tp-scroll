@@ -5,6 +5,7 @@ Project documentation, kept in sync with the codebase at every commit.
 ## Map
 
 - [`architecture.md`](architecture.md) — high-level system overview and layer boundaries
+- [`desktop.md`](desktop.md) — run, install, and release the Electron desktop app
 - [`cli.md`](cli.md) — CLI command reference
 - [`testing.md`](testing.md) — test pyramid, optimizer invariants, conventions
 - [`dependencies.md`](dependencies.md) — runtime + dev dependencies and why each one is here
@@ -25,3 +26,4 @@ Project documentation, kept in sync with the codebase at every commit.
 | v1.5 | Flight adapter (originally [`design/0009-flights-amadeus.md`](design/0009-flights-amadeus.md), now SUPERSEDED by [`design/0012-flights-travelpayouts.md`](design/0012-flights-travelpayouts.md) after Amadeus announced its 2026-07-17 EOL). New `@tp-scroll/adapter-flights` package. Travelpayouts + Mock providers, in-memory LRU + TTL cache, `annotatePlan` orchestrator. Plan view shows per-trip + total flight prices behind an opt-in toggle. **Informational only.** |
 | v1.7 | Flight-aware optimizer ([`design/0010-flight-aware-optimizer.md`](design/0010-flight-aware-optimizer.md)). `FlightConstraints` (max duration, depart-after, arrive-before, AND/OR combine) on `Session`. `OptimizeOptions.flightInfo` + `priceAware` — 5-tier lex scoring with price as tiebreaker. Sessions view gets a Flight-constraints card; Plan view gets a "price-aware" toggle. **Decisional — plans now respect flight constraints and tiebreak by price.** |
 | v2.5 | Per-kind buckets ([`design/0011-bucket-kinds.md`](design/0011-bucket-kinds.md)). `LeaveBucket.kind: "annual" \| "sick" \| "parental" \| "conference" \| "other"` with Zod-default for transparent migration. Optimizer's default planning bucket prefers `kind: "annual"`. Calendar grid paints trips in their bucket's colour (sage / mauve / teal / amber / grey). Sessions view's "Buckets" card lists and creates them. CLI `buckets new --kind X`. We **skipped v2.0** (PDF/Markdown reports, scenario diff) per the user's call. |
+| — | Desktop packaging & releases ([`design/0013-desktop-packaging-and-releases.md`](design/0013-desktop-packaging-and-releases.md)). electron-builder produces a Linux AppImage + `.deb`; a `v*`-tag GitHub Actions workflow publishes them to GitHub Releases. Main process bundles all runtime deps so the installer ships no `node_modules`. See [`desktop.md`](desktop.md). |

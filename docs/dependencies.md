@@ -18,7 +18,8 @@ Curated list of runtime and dev dependencies and why each one is here.
 | `typescript` | The language. Strict mode, ESM, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. |
 | `vitest` | Unit + integration tests. |
 | `fast-check` | Property tests for the optimizer (≥6 invariants). |
-| `tsup` | Bundle the CLI to a single executable. |
+| `tsup` | Bundle the CLI to a single executable; also bundles the desktop main process (with all runtime deps inlined) for self-contained packaging. |
+| `electron-builder` | Package the desktop app into a Linux AppImage + `.deb` and publish them to GitHub Releases. Desktop package only. See [`desktop.md`](desktop.md). |
 | `eslint`, `@typescript-eslint/*`, `prettier`, `eslint-config-prettier` | Lint + format. |
 | `@js-temporal/polyfill` | Opt-in for Node 20 contributors. Production path uses native `Temporal` on Node ≥22. |
 

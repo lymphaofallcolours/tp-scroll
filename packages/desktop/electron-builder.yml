@@ -1,0 +1,43 @@
+appId: com.lympha.tpscroll
+productName: tp-scroll
+copyright: Copyright © 2026 Lympha
+
+# The app is fully self-contained: tsup bundles every main-process dependency
+# into dist/electron/main.js and Vite bundles the renderer into dist/renderer,
+# so we ship dist/ + package.json only and never copy the (pnpm-symlinked)
+# node_modules tree.
+files:
+  - dist/**/*
+  - package.json
+
+directories:
+  output: release
+  # Not "build/" — that name is gitignored repo-wide, so the icon would never
+  # be committed and CI release builds would fail.
+  buildResources: packaging
+
+# Linux is the only target for now (the user's platform).
+linux:
+  # Clean binary name (defaults to the sanitized package name "@tp-scrolldesktop").
+  executableName: tp-scroll
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  icon: packaging/icon.png
+  synopsis: Optimize annual leave around weekends and public holidays
+  description: >-
+    tp-scroll helps you maximise time at home by optimally scheduling annual
+    leave around weekends, public holidays and personal constraints.
+
+# Stable, human-readable artifact names, e.g. tp-scroll-0.1.0-x86_64.AppImage.
+# Hardcoded base because ${name} would expand to the scoped "@tp-scroll/desktop"
+# whose "/" breaks the output path.
+artifactName: tp-scroll-${version}-${arch}.${ext}
+
+# Releases are published to GitHub; the CI workflow runs electron-builder with
+# --publish always and a GH_TOKEN. Locally, builds stay on disk (never publish).
+publish:
+  provider: github
+  owner: lymphaofallcolours
+  repo: tp-scroll
