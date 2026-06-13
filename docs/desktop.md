@@ -57,9 +57,36 @@ The [`Release` workflow](../.github/workflows/release.yml) (triggered on `v*`
 tags) builds the Linux installers and runs `electron-builder --publish always`,
 which creates the GitHub Release for that tag and uploads both artifacts. It
 authenticates with the workflow's built-in `GITHUB_TOKEN` — no extra secret to
-configure.
+configure. The release is published **public immediately**
+(`publish.releaseType: release` in `electron-builder.yml`) — no manual "publish
+draft" step.
 
 Download published artifacts from the repository's **Releases** page.
+
+## Updating to a new version
+
+### AppImage — automatic
+
+The app self-updates via `electron-updater`. On launch (only when running as a
+packaged AppImage) it checks the GitHub releases feed; if a newer version
+exists it downloads it in the background, shows a native notification, and
+installs it the next time you quit. Nothing to do.
+
+> Caveat: an AppImage can only auto-update **forward from a build that already
+> contains the updater** (v1.1.0+). The first v1.0.0 download must be replaced
+> manually once; from then on it's automatic.
+
+### `.deb` — manual (managed by APT)
+
+`electron-updater` can't replace an OS-package install, so update the `.deb`
+yourself — APT swaps the version in place:
+
+```bash
+gh release download --repo lymphaofallcolours/tp-scroll --pattern '*.deb'  # latest release
+sudo apt install ./tp-scroll-*-amd64.deb
+```
+
+Session data in `~/.tp-scroll/` is untouched by either update path.
 
 > Currently Linux-only (the maintainer's platform). Adding macOS/Windows is a
 > matter of extending the `release.yml` matrix and the `electron-builder.yml`

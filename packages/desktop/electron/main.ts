@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 import { registerIpc } from "./ipc.js";
+import { initAutoUpdater } from "./updater.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env["NODE_ENV"] === "development";
@@ -37,6 +38,7 @@ const createWindow = async (): Promise<void> => {
 void app.whenReady().then(async () => {
   registerIpc();
   await createWindow();
+  initAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();

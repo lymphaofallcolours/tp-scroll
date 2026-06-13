@@ -1,6 +1,6 @@
 {
   "name": "@tp-scroll/desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Optimize annual leave around weekends and public holidays",
@@ -32,6 +32,7 @@
     "@tp-scroll/adapter-storage": "workspace:*",
     "@tp-scroll/core": "workspace:*",
     "chart.js": "^4.5.1",
+    "electron-updater": "^6.3.9",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",

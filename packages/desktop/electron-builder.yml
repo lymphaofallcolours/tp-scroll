@@ -41,3 +41,7 @@ publish:
   provider: github
   owner: lymphaofallcolours
   repo: tp-scroll
+  # Publish a public release straight away (default is "draft", which would
+  # require a manual "publish" click after every tag push). Also lets
+  # electron-updater see the new version's latest-linux.yml feed immediately.
+  releaseType: release

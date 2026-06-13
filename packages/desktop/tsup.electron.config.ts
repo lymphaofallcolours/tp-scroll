@@ -23,6 +23,13 @@ export default defineConfig([
     // must be inlined here. date-holidays inlines its JSON dataset when bundled.
     external: ["electron"],
     noExternal: [BUNDLE_EVERYTHING_EXCEPT_ELECTRON],
+    // Some bundled CJS deps (graceful-fs / fs-extra via electron-updater) call
+    // require("fs") at load time. In an ESM bundle `require` is undefined, so
+    // esbuild's shim throws "Dynamic require of \"fs\" is not supported". Inject
+    // a real require built from import.meta.url so those calls resolve.
+    banner: {
+      js: "import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);",
+    },
     clean: true,
     sourcemap: true,
     dts: false,

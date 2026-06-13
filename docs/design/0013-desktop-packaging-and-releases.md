@@ -54,6 +54,24 @@ Push a tag matching the package version (`git tag v1.0.0 && git push origin
 v1.0.0`); `.github/workflows/release.yml` builds and uploads the installers to
 the tag's GitHub Release.
 
+## Addendum (2026-06-13) — auto-publish + in-app auto-update
+
+- **Auto-publish.** `publish.releaseType: release` (default is `draft`) so a tag
+  push yields a public release with no manual "publish" click.
+- **Auto-update.** `electron-updater` checks the GitHub feed on launch and
+  installs newer versions on quit. Scoped by a pure `shouldAutoUpdate(isPackaged,
+  platform, env)` predicate (unit-tested) to **packaged AppImage on Linux only**
+  — it can't update a `.deb` (APT owns those) and is a no-op in dev. Failures are
+  swallowed so they can't break startup. Wired from `main.ts` via
+  `electron/updater.ts`; the pure predicate lives in `electron/update-policy.ts`
+  so it's testable without importing electron.
+- **Bundling gotcha (2nd one).** electron-updater pulls in `fs-extra`/`graceful-fs`,
+  whose CJS does `require("fs")` at load. In the ESM main bundle `require` is
+  undefined → esbuild's shim throws `Dynamic require of "fs" is not supported`.
+  Fix: a tsup `banner` injecting `const require = createRequire(import.meta.url)`.
+- **Forward-only floor.** Auto-update only works *from* a build that already ships
+  the updater (v1.1.0+); v1.0.0 must be updated manually once.
+
 ## Consequences
 
 - Users get clickable installers, downloadable per version from the Releases page.
