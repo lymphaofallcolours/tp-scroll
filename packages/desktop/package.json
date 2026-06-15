@@ -1,6 +1,6 @@
 {
   "name": "@tp-scroll/desktop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "description": "Optimize annual leave around weekends and public holidays",

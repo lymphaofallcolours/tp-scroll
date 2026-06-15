@@ -9,6 +9,10 @@ copyright: Copyright © 2026 Lympha
 files:
   - dist/**/*
   - package.json
+  # Window/taskbar icon, loaded at runtime by the main process (BrowserWindow
+  # icon). The .deb/AppImage launcher icon is handled separately by electron-
+  # builder from linux.icon below; this copy is for the running window.
+  - packaging/icon.png
 
 directories:
   output: release
